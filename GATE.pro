@@ -34,10 +34,10 @@ CONFIG += c++17
 
 DEFINES += HAVE_CONFIG_H
 
-INCLUDEPATH += ../GATE/speex-1.2.0/include/
-INCLUDEPATH += ../GATE/speex-1.2.0/libspeex/
-INCLUDEPATH += ../GATE/speex-1.2.0/src/
-INCLUDEPATH += ../GATE/speex-1.2.0/win32/
+INCLUDEPATH += ../VOIP_DISPATCHER/speex-1.2.0/include/
+INCLUDEPATH += ../VOIP_DISPATCHER/speex-1.2.0/libspeex/
+INCLUDEPATH += ../VOIP_DISPATCHER/speex-1.2.0/src/
+INCLUDEPATH += ../VOIP_DISPATCHER/speex-1.2.0/win32/
 
 SOURCES += \
         main.cpp \

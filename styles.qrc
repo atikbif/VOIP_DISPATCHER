@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/woodbutton.png</file>
+        <file>images/woodbackground.png</file>
+        <file>images/config.png</file>
+    </qresource>
+</RCC>

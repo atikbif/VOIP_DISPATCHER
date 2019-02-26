@@ -79,7 +79,10 @@ SOURCES += \
     checksum.cpp \
     udpworker.cpp \
     udpcontroller.cpp \
-    qcustomplot.cpp
+    qcustomplot.cpp \
+    audiooutputdevice.cpp \
+    norwegianwoodstyle.cpp \
+    dialogconfig.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -87,12 +90,19 @@ HEADERS += \
     checksum.h \
     udpworker.h \
     udpcontroller.h \
-    qcustomplot.h
+    qcustomplot.h \
+    audiooutputdevice.h \
+    norwegianwoodstyle.h \
+    dialogconfig.h
 
 FORMS += \
-        mainwindow.ui
+        mainwindow.ui \
+    dialogconfig.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+RESOURCES += \
+    styles.qrc

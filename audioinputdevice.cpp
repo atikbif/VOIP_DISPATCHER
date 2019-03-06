@@ -27,7 +27,7 @@ AudioInputDevice::AudioInputDevice(const QAudioFormat &format,UDPController *sca
     int error;
     //enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_VOIP, &error);
     enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_AUDIO, &error);
-    opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(1));
+    opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(4));
     dec = opus_decoder_create(8000, 1, &error);
     //opus_decoder_ctl(dec,OPUS_SET_COMPLEXITY(4));
     /*state = speex_encoder_init(&speex_nb_mode);
@@ -90,7 +90,6 @@ qint64 AudioInputDevice::writeData(const char *data, qint64 len)
     for (int i = 0; i < len; i++) {
       curBuf.append(data[i]);
     }
-
     nbBytes = opus_encode(enc, (opus_int16*)data, len/2,(unsigned char*) cbits, 1024);
     qDebug() << nbBytes;
 

@@ -5,7 +5,8 @@
 #include <QIODevice>
 #include <QAudioDeviceInfo>
 #include <QAudioInput>
-#include "speex/speex.h"
+//#include "speex/speex.h"
+#include "opus.h"
 #include <QUdpSocket>
 #include "udpcontroller.h"
 
@@ -17,9 +18,11 @@ class AudioInputDevice : public QIODevice
 
   const QAudioFormat m_format; // audio stream parameters
   // speex variables
-  SpeexBits bits;
-  void *state;
-  void *dec_state;
+  //SpeexBits bits;
+  OpusEncoder *enc;
+  OpusDecoder *dec;
+  //void *state;
+  //void *dec_state;
   QByteArray micrData;
   qint16 input[FRAME_SIZE];
   char cbits[1024];

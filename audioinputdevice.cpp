@@ -24,7 +24,13 @@ AudioInputDevice::AudioInputDevice(const QAudioFormat &format,UDPController *sca
         default:
             break;
     }
-    state = speex_encoder_init(&speex_nb_mode);
+    int error;
+    //enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_VOIP, &error);
+    enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_AUDIO, &error);
+    opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(1));
+    dec = opus_decoder_create(8000, 1, &error);
+    //opus_decoder_ctl(dec,OPUS_SET_COMPLEXITY(4));
+    /*state = speex_encoder_init(&speex_nb_mode);
     speex_bits_init(&bits);
     tmp=4;
     speex_encoder_ctl(state, SPEEX_SET_QUALITY, &tmp);
@@ -38,7 +44,7 @@ AudioInputDevice::AudioInputDevice(const QAudioFormat &format,UDPController *sca
     tmp = 8000;
     speex_encoder_ctl(dec_state, SPEEX_SET_SAMPLING_RATE, &tmp);
     tmp=1;
-    speex_decoder_ctl(dec_state, SPEEX_SET_ENH, &tmp);
+    speex_decoder_ctl(dec_state, SPEEX_SET_ENH, &tmp);*/
 
     /*udp.connectToHost(QHostAddress("192.168.5.85"),7);
     if(!udp.open(QIODevice::ReadWrite)) {
@@ -83,17 +89,22 @@ qint64 AudioInputDevice::writeData(const char *data, qint64 len)
     emit newLevel(plot);
     for (int i = 0; i < len; i++) {
       curBuf.append(data[i]);
-      if(curBuf.count()==FRAME_SIZE*2) {
-        char *ptr = curBuf.data();
-        speex_bits_reset(&bits);
-        speex_encode_int(state, (spx_int16_t*)ptr, &bits);
-        nbBytes = speex_bits_write(&bits, cbits, 1024);
-        curBuf.clear();
-        if(nbBytes>udpBufMaxLength) nbBytes=udpBufMaxLength;
-        for(int j=0;j<nbBytes;j++) {
-          udpBuf.append(cbits[j]);
-        }
-      }
+    }
+
+    nbBytes = opus_encode(enc, (opus_int16*)data, len/2,(unsigned char*) cbits, 1024);
+    qDebug() << nbBytes;
+
+    /*for(int i=0;i<len;i++) {
+      str+=QString::number(res[i],16) + " ";
+      if(i && (i%16==0 || i==len-1)) {qDebug() << "ENC:" + str;str="";}
+    }*/
+    /*speex_bits_reset(&bits);
+    speex_encode_int(state, (spx_int16_t*)ptr, &bits);
+    nbBytes = speex_bits_write(&bits, cbits, 1024);*/
+    curBuf.clear();
+    if(nbBytes>udpBufMaxLength) nbBytes=udpBufMaxLength;
+    for(int j=0;j<nbBytes;j++) {
+      udpBuf.append(cbits[j]);
     }
     //qDebug()<<udpBuf.size();
     sendUDPData(udpBuf);

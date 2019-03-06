@@ -5,7 +5,8 @@
 #include <QMutex>
 #include <QUdpSocket>
 #include <QByteArray>
-#include "speex/speex.h"
+//#include "speex/speex.h"
+#include "opus.h"
 
 class UDPWorker : public QObject
 {
@@ -16,9 +17,11 @@ class UDPWorker : public QObject
     bool linkState = false;
     QByteArray packet;
 
-    SpeexBits bits;
-    void *state;
-    void *dec_state;
+    //SpeexBits bits;
+    //void *state;
+    //void *dec_state;
+    OpusEncoder *enc;
+    OpusDecoder *dec;
 
     mutable QMutex mutex;
     static quint16 id;

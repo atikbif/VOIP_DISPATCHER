@@ -68,8 +68,12 @@ void UDPWorker::checkLink(QUdpSocket &udp)
 
 UDPWorker::UDPWorker(QObject *parent) : QObject(parent)
 {
-  int tmp = 0;
-  state = speex_encoder_init(&speex_nb_mode);
+  //int tmp = 0;
+  int error = 0;
+  enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_VOIP, &error);
+  opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(4));
+  dec = opus_decoder_create(8000, 1, &error);
+  /*state = speex_encoder_init(&speex_nb_mode);
   speex_bits_init(&bits);
   tmp = 4;
   speex_encoder_ctl(state, SPEEX_SET_QUALITY, &tmp);
@@ -83,7 +87,7 @@ UDPWorker::UDPWorker(QObject *parent) : QObject(parent)
     tmp = 8000;
     speex_encoder_ctl(dec_state, SPEEX_SET_SAMPLING_RATE, &tmp);
     tmp=1;
-    speex_decoder_ctl(dec_state, SPEEX_SET_ENH, &tmp);
+    speex_decoder_ctl(dec_state, SPEEX_SET_ENH, &tmp);*/
 }
 
 void UDPWorker::start()
@@ -140,10 +144,27 @@ void UDPWorker::scan()
             check_cnt++;
             if(check_cnt>=100) {
                 check_cnt = 0;
-                checkLink(udp);
+                //checkLink(udp);
             }
             if(newAudioPacketFlagState) {
                 mutex.lock();
+                newAudioPacketFlag=0;
+                mutex.unlock();
+                char ptr[1024];
+                int cnt=0;
+                for(auto ch:packet) ptr[cnt++]=ch;
+                int offset=0;
+
+                  auto frame_size = opus_decode(dec, (unsigned char*)&ptr[0], cnt, (opus_int16*)&decodeBuf[0], 1024, 0);
+                  QByteArray inp = QByteArray::fromRawData(&decodeBuf[0],frame_size*2);
+                  emit updateAudio(inp);
+                  //qDebug() << "DECODE" << frame_size;
+                  /*speex_bits_read_from(&bits, &ptr[offset], 20);
+                  speex_decode_int(dec_state, &bits, (spx_int16_t*)&decodeBuf[decodeBufOffset]);
+                  QByteArray inp = QByteArray::fromRawData(&decodeBuf[decodeBufOffset],320);
+                  decodeBufOffset+=320;
+                  emit updateAudio(inp);*/
+                /*mutex.lock();
                 newAudioPacketFlag=0;
                 udp.write(createRequestWriteAudio(packet,silent));
                 mutex.unlock();
@@ -170,7 +191,7 @@ void UDPWorker::scan()
                       offset+=20;
                     }
                   }
-              }
+              }*/
            }
         }
         if(finishFlagstate) break;

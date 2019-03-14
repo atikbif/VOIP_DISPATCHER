@@ -136,7 +136,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
     ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :lightgray; }");
 
     ui->toolBar->addAction(QIcon(":/images/config.png"),"Настройка",[this](){QDialog *dialog = new DialogConfig();auto res = dialog->exec();if(res==QDialog::Accepted) updatePointsList();delete dialog;});
-    showMaximized();
+    //showMaximized();
 }
 
 MainWindow::~MainWindow()
@@ -166,7 +166,7 @@ void MainWindow::on_pushButtonStartStop_clicked()
         m_audioInputDevice.reset(new AudioInputDevice(format,udpScanner));
         connect(m_audioInputDevice.data(),&AudioInputDevice::newLevel,this,&MainWindow::newLevel);
         m_qaudioInput.reset(new QAudioInput(inpDeviceInfo, format));
-        m_qaudioInput->setVolume(0.8);
+        m_qaudioInput->setVolume(0.5);
         m_audioInputDevice->start();
         m_qaudioInput->start(m_audioInputDevice.data());
 

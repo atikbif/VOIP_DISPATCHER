@@ -363,7 +363,8 @@ HEADERS += \
     opus-1.3/src/mlp.h \
     opus-1.3/src/opus_private.h \
     opus-1.3/src/tansig_table.h \
-    opus-1.3/win32/config.h
+    opus-1.3/win32/config.h \
+    wav_example.h
 
 FORMS += \
         mainwindow.ui \

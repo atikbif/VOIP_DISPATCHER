@@ -3,6 +3,8 @@
 #include "checksum.h"
 #include <QtConcurrent/QtConcurrent>
 
+#include "wav_example.h"
+
 quint16 AudioInputDevice::id=0;
 
 void AudioInputDevice::sendUDPData(const QByteArray &input)
@@ -28,30 +30,19 @@ AudioInputDevice::AudioInputDevice(const QAudioFormat &format,UDPController *sca
     //enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_VOIP, &error);
     enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_AUDIO, &error);
     opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(4));
+    opus_encoder_ctl(enc, OPUS_SET_BITRATE(8000));
     dec = opus_decoder_create(8000, 1, &error);
-    //opus_decoder_ctl(dec,OPUS_SET_COMPLEXITY(4));
-    /*state = speex_encoder_init(&speex_nb_mode);
-    speex_bits_init(&bits);
-    tmp=4;
-    speex_encoder_ctl(state, SPEEX_SET_QUALITY, &tmp);
-    tmp = 8000;
-    speex_encoder_ctl(state, SPEEX_SET_SAMPLING_RATE, &tmp);
-    quint32 enc_frame_size;
-    speex_encoder_ctl(state, SPEEX_GET_FRAME_SIZE, &enc_frame_size);
 
-    dec_state = speex_decoder_init(&speex_nb_mode);
-    speex_encoder_ctl(dec_state, SPEEX_SET_QUALITY, &tmp);
-    tmp = 8000;
-    speex_encoder_ctl(dec_state, SPEEX_SET_SAMPLING_RATE, &tmp);
-    tmp=1;
-    speex_decoder_ctl(dec_state, SPEEX_SET_ENH, &tmp);*/
+    /*opus_int16 test[160];
+    for(int i=0;i<160;i++) test[i]=0;
+    unsigned char res[100];
+    auto nbBytes = opus_encode(enc, test, 160,res, 100);
+    QString empty;
+    for(int i=0;i<nbBytes;i++) {
+        empty+=QString::number(res[i],16)+" ";
+    }
+    qDebug()<< nbBytes << empty;*/
 
-    /*udp.connectToHost(QHostAddress("192.168.5.85"),7);
-    if(!udp.open(QIODevice::ReadWrite)) {
-        qDebug() << "problem";
-    }else {
-        qDebug() << "open";
-    }*/
 }
 
 void AudioInputDevice::start()
@@ -73,6 +64,7 @@ qint64 AudioInputDevice::readData(char *data, qint64 maxlen)
 
 qint64 AudioInputDevice::writeData(const char *data, qint64 len)
 {
+    static long ex_offset = 0;
     static QByteArray curBuf;
     QByteArray udpBuf;
     int nbBytes;
@@ -90,22 +82,25 @@ qint64 AudioInputDevice::writeData(const char *data, qint64 len)
     for (int i = 0; i < len; i++) {
       curBuf.append(data[i]);
     }
-    nbBytes = opus_encode(enc, (opus_int16*)data, len/2,(unsigned char*) cbits, 1024);
-    qDebug() << nbBytes;
-
-    /*for(int i=0;i<len;i++) {
-      str+=QString::number(res[i],16) + " ";
-      if(i && (i%16==0 || i==len-1)) {qDebug() << "ENC:" + str;str="";}
-    }*/
-    /*speex_bits_reset(&bits);
-    speex_encode_int(state, (spx_int16_t*)ptr, &bits);
-    nbBytes = speex_bits_write(&bits, cbits, 1024);*/
-    curBuf.clear();
-    if(nbBytes>udpBufMaxLength) nbBytes=udpBufMaxLength;
-    for(int j=0;j<nbBytes;j++) {
-      udpBuf.append(cbits[j]);
+    int offset = 0;
+    int pckt_cnt = len/320;
+    int pckt_num = 0;
+    udpBuf.append(pckt_cnt);
+    for(int i=0;i<pckt_cnt;i++) udpBuf.append('\0');
+    while (len>=320) {
+        nbBytes = opus_encode(enc, (opus_int16*)&data[offset], 160,(unsigned char*) cbits, 1024);
+        //nbBytes = opus_encode(enc, (opus_int16*)&wav_ex[ex_offset], 160,(unsigned char*) cbits, 1024);
+        //ex_offset+=320;if(ex_offset>=sizeof (wav_ex)) ex_offset=0;
+        udpBuf[1+pckt_num] = nbBytes;
+        pckt_num++;
+        //qDebug() << nbBytes;
+        curBuf.clear();
+        //if(nbBytes>udpBufMaxLength) nbBytes=udpBufMaxLength;
+        for(int j=0;j<nbBytes;j++) {
+          udpBuf.append(cbits[j]);
+        }
+        len-=320;offset+=320;
     }
-    //qDebug()<<udpBuf.size();
     sendUDPData(udpBuf);
     return res;
 }

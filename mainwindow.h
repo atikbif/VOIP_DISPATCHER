@@ -7,6 +7,7 @@
 #include <QScopedPointer>
 #include <udpcontroller.h>
 #include <QRadioButton>
+#include <QTimer>
 
 namespace Ui {
 class MainWindow;
@@ -20,6 +21,8 @@ class MainWindow : public QMainWindow
 
     bool buttonCmd = START;
 
+    QTimer *timer;
+
     QScopedPointer<AudioInputDevice> m_audioInputDevice;
     QScopedPointer<QAudioInput> m_qaudioInput;
 
@@ -30,11 +33,14 @@ class MainWindow : public QMainWindow
 
     QAudioDeviceInfo getInpDevice(const QString &name);
     QAudioDeviceInfo getOutDevice(const QString &name);
+    void setTimerInterval(int value);
 
     QVector<double> x, y;
     QVector<double> x2, y2;
 
     std::vector<QRadioButton*> points;
+    int point_cnt;
+    int audio_tmr;
 
     bool linkState = false;
 
@@ -50,10 +56,18 @@ private slots:
     void newOutLevel(const QVector<double> &inp);
     void linkStatechanged(bool value);
     void fromIDChanged(unsigned char value);
+    void updateState(const QByteArray &state);
+    void checkAudio();
 
 void radioButton_toggled(bool checked);
 
 void on_checkBox_clicked();
+
+void on_pushButtonCloseTree_clicked();
+
+void on_pushButtonOpenTree_clicked();
+
+void on_pushButtonCheckAudio_clicked();
 
 private:
     Ui::MainWindow *ui;

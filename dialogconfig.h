@@ -12,7 +12,6 @@ class DialogConfig;
 
 struct PointState{
   QLineEdit* name;
-  QCheckBox* acivate;
 };
 
 class DialogConfig : public QDialog
@@ -25,9 +24,6 @@ public:
     ~DialogConfig();
 
 private slots:
-    void on_pushButtonClearAll_clicked();
-
-void on_pushButtonSetAll_clicked();
 
 private:
     Ui::DialogConfig *ui;

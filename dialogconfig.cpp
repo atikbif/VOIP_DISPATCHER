@@ -15,22 +15,12 @@ void DialogConfig::readPoints()
     for (int i = 0; i < 100; i++) {
     ui->tableWidget->insertRow(i);
 
-    QWidget *checkBoxWidget = new QWidget();
-        QCheckBox *checkBox = new QCheckBox();      // We declare and initialize the checkbox
-        QHBoxLayout *layoutCheckBox = new QHBoxLayout(checkBoxWidget); // create a layer with reference to the widget
-        layoutCheckBox->addWidget(checkBox);            // Set the checkbox in the layer
-        layoutCheckBox->setAlignment(Qt::AlignCenter);  // Center the checkbox
-        layoutCheckBox->setContentsMargins(0,0,0,0);    // Set the zero padding
-
-
         QLineEdit *name = new QLineEdit();
         PointState point;
         point.name = name;
-        point.acivate = checkBox;
         points.push_back(point);
 
-        ui->tableWidget->setCellWidget(i,1,name);
-        ui->tableWidget->setCellWidget(i,0,checkBoxWidget);
+        ui->tableWidget->setCellWidget(i,0,name);
     }
 
   QFile confFile("conf.json");
@@ -38,6 +28,14 @@ void DialogConfig::readPoints()
     QByteArray saveData = confFile.readAll();
     QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
     QJsonObject loadOb = loadDoc.object();
+    if(loadOb.contains("points cnt")) {
+      QString cnt = loadOb["points cnt"].toString();
+      ui->spinBoxPointCnt->setValue(cnt.toInt());
+    }
+    if(loadOb.contains("audio tmr")) {
+      QString cnt = loadOb["audio tmr"].toString();
+      ui->spinBoxCheckAudioTmr->setValue(cnt.toInt());
+    }
     if(loadOb.contains("points") && loadOb["points"].isArray()) {
       QJsonArray jsPoints = loadOb["points"].toArray();
       for (int i = 0; i < jsPoints.size(); ++i) {
@@ -48,9 +46,8 @@ void DialogConfig::readPoints()
         if(!pointOb.contains("on") || !pointOb["on"].isBool()) checkPoint = false;
         if(checkPoint) {
           int num = pointOb["address"].toInt()-1;
-          if(num>=0 && num<points.size()) {
-            points.at(num).name->setText(pointOb["name"].toString());
-            points.at(num).acivate->setChecked(pointOb["on"].toBool());
+          if(num>=0 && num<(int)points.size()) {
+            points.at((std::size_t)num).name->setText(pointOb["name"].toString());
             readConf = true;
           }
         }
@@ -59,11 +56,9 @@ void DialogConfig::readPoints()
   }
   if(readConf==false) {
     for(int i=0;i<3;i++) {
-      points.at(i).name->setText("ТОЧКА " + QString::number(i+1));
-      points.at(i).acivate->setChecked(true);
+      points.at((std::size_t)i).name->setText("ТОЧКА " + QString::number(i+1));
     }
   }
-
 }
 
 DialogConfig::DialogConfig(QWidget *parent) :
@@ -72,9 +67,9 @@ DialogConfig::DialogConfig(QWidget *parent) :
 {
     ui->setupUi(this);
     ui->tableWidget->clear();
-    ui->tableWidget->setColumnCount(2); // Указываем число колонок
+    ui->tableWidget->setColumnCount(1); // Указываем число колонок
     ui->tableWidget->setShowGrid(true);
-    ui->tableWidget->setHorizontalHeaderLabels(QStringList() << "разрешение" << "имя");
+    ui->tableWidget->setHorizontalHeaderLabels(QStringList() << "имя");
     // Растягиваем последнюю колонку на всё доступное пространство
     ui->tableWidget->horizontalHeader()->setStretchLastSection(true);
 
@@ -86,20 +81,6 @@ DialogConfig::~DialogConfig()
     delete ui;
 }
 
-void DialogConfig::on_pushButtonClearAll_clicked()
-{
-  for (PointState point : points) {
-    point.acivate->setChecked(false);
-  }
-}
-
-void DialogConfig::on_pushButtonSetAll_clicked()
-{
-  for(PointState point:points) {
-    point.acivate->setChecked(true);
-  }
-}
-
 void DialogConfig::accept()
 {
   QFile confFile("conf.json");
@@ -108,10 +89,12 @@ void DialogConfig::accept()
     QJsonArray pointsArray;
     int addr = 1;
     for(PointState point:points) {
-      QJsonObject p({{"name",point.name->text()},{"on",point.acivate->isChecked()},{"address",addr++}});
+      QJsonObject p({{"name",point.name->text()},{"address",addr++}});
       pointsArray.append(p);
     }
     confObject["version"] = "1.0";
+    confObject["points cnt"] = QString::number(ui->spinBoxPointCnt->value());
+    confObject["audio tmr"] = QString::number(ui->spinBoxCheckAudioTmr->value());
     confObject["points"] = pointsArray;
     QJsonDocument confDoc(confObject);
     confFile.write(confDoc.toJson());

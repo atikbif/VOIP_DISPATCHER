@@ -19,12 +19,14 @@ public:
     void writeAudioPacket(const QByteArray &input);
     void setToID(unsigned char id);
     void setSilentMode(bool value) {worker->setSilentMode(value);}
+    void checkAudio();
 
 signals:
     void init();
     void linkStateChanged(bool value);
     void updateAudio(QByteArray data);
     void fromIDSignal(unsigned char value);
+    void updateState(const QByteArray &data);
 public slots:
 };
 

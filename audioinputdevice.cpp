@@ -28,9 +28,11 @@ AudioInputDevice::AudioInputDevice(const QAudioFormat &format,UDPController *sca
     }
     int error;
     //enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_VOIP, &error);
-    enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_AUDIO, &error);
-    opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(4));
-    opus_encoder_ctl(enc, OPUS_SET_BITRATE(8000));
+    enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_RESTRICTED_LOWDELAY, &error);
+    //enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_AUDIO, &error);
+    //opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_NARROWBAND));
+    opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(10));
+    //opus_encoder_ctl(enc, OPUS_SET_BITRATE(16000));
     dec = opus_decoder_create(8000, 1, &error);
 
     /*opus_int16 test[160];
@@ -71,6 +73,7 @@ qint64 AudioInputDevice::writeData(const char *data, qint64 len)
     static const int udpBufMaxLength = 40;
     qint64 res = len;
 
+
     const unsigned char *ptr = reinterpret_cast<const unsigned char *>(data);
     QVector<double> plot;
     for (int i = 0; i < len/2; ++i) {
@@ -82,6 +85,9 @@ qint64 AudioInputDevice::writeData(const char *data, qint64 len)
     for (int i = 0; i < len; i++) {
       curBuf.append(data[i]);
     }
+
+    //qDebug()<<curBuf;
+
     int offset = 0;
     int pckt_cnt = len/320;
     int pckt_num = 0;
@@ -101,6 +107,8 @@ qint64 AudioInputDevice::writeData(const char *data, qint64 len)
         }
         len-=320;offset+=320;
     }
+   // qDebug()<<pckt_cnt << ":" << udpBuf;
+
     sendUDPData(udpBuf);
     return res;
 }

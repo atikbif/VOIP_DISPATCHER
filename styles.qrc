@@ -3,5 +3,7 @@
         <file>images/woodbutton.png</file>
         <file>images/woodbackground.png</file>
         <file>images/config.png</file>
+        <file>listen.png</file>
+        <file>speak.png</file>
     </qresource>
 </RCC>

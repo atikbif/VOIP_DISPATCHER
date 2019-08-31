@@ -31,9 +31,14 @@ class UDPWorker : public QObject
 
     QByteArray createRequestWriteAudio(const QByteArray &input, bool silentMode = false);
     QByteArray createRequestCheckLink();
+    QByteArray createRequestReadState();
+    QByteArray createRequestCheckAudio();
     bool silent = false;
+    bool checkAudioFlag = false;
 
     void checkLink(QUdpSocket &udp);
+    void readState(QUdpSocket &udp);
+    void checkAudioCmd(QUdpSocket &udp);
 
 public:
     explicit UDPWorker(QObject *parent = nullptr);
@@ -44,10 +49,12 @@ public:
     bool getLinkState() const;
     void setToID(unsigned char id) {toID = id;}
     void setSilentMode(bool value) {silent=value;}
+    void checkAudio();
 
 signals:
   void linkStateChanged(bool value);
   void updateAudio(QByteArray data);
+  void updateState(const QByteArray &data);
   void fromIDSignal(unsigned char value);
 public slots:
     void scan();

@@ -9,6 +9,7 @@ UDPController::UDPController(QObject *parent) : QObject(parent)
     connect(worker, &UDPWorker::linkStateChanged,this,&UDPController::linkStateChanged);
     connect(worker, &UDPWorker::updateAudio,this,&UDPController::updateAudio);
     connect(worker, &UDPWorker::fromIDSignal, this, &UDPController::fromIDSignal);
+    connect(worker, &UDPWorker::updateState, this, &UDPController::updateState);
     udpThread.start();
     emit init();
 }
@@ -37,5 +38,10 @@ void UDPController::writeAudioPacket(const QByteArray &input)
 
 void UDPController::setToID(unsigned char id)
 {
-  worker->setToID(id);
+    worker->setToID(id);
+}
+
+void UDPController::checkAudio()
+{
+ worker->checkAudio();
 }

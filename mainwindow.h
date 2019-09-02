@@ -21,7 +21,7 @@ class MainWindow : public QMainWindow
 
     bool buttonCmd = START;
 
-    QTimer *timer;
+    QTimer *speakerTimer;
 
     QScopedPointer<AudioInputDevice> m_audioInputDevice;
     QScopedPointer<QAudioInput> m_qaudioInput;
@@ -45,6 +45,7 @@ class MainWindow : public QMainWindow
     bool linkState = false;
 
     void updatePointsList();
+    void updateAlarmList(const QStringList &list);
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);

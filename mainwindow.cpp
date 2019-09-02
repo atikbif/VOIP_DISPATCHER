@@ -23,17 +23,16 @@ QAudioDeviceInfo MainWindow::getOutDevice(const QString &name)
 
 void MainWindow::setTimerInterval(int value)
 {
-    qDebug() << value;
-    if(timer) {
-        delete timer;
-        timer = nullptr;
+    if(speakerTimer!=nullptr) {
+        delete speakerTimer;
+        speakerTimer = nullptr;
     }
-    timer = new QTimer(this);
+    speakerTimer = new QTimer(this);
     //timer->moveToThread(this->thread());
-    connect(timer, SIGNAL(timeout()), this, SLOT(checkAudio()));
+    connect(speakerTimer, SIGNAL(timeout()), this, SLOT(checkAudio()));
     if(value) {
-        timer->setInterval(value*1000);
-        timer->start();
+        speakerTimer->setInterval(value*1000);
+        speakerTimer->start();
     }
 }
 
@@ -137,12 +136,27 @@ void MainWindow::updatePointsList()
   ui->treeWidget->collapseAll();
 }
 
+void MainWindow::updateAlarmList(const QStringList &list)
+{
+    ui->listWidgetAlarm->clear();
+    if(list.isEmpty()) {
+        ui->listWidgetAlarm->addItem("Аварии отсутствуют");
+        ui->listWidgetAlarm->item(0)->setBackgroundColor(QColor(Qt::green));
+    }else {
+
+        ui->listWidgetAlarm->addItems(list);
+        for(int i=0;i<list.length();i++) {
+            ui->listWidgetAlarm->item(i)->setBackgroundColor(QColor(Qt::red));
+        }
+    }
+}
+
 MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow) {
   QTextCodec *utfcodec = QTextCodec::codecForName("UTF-8");
   QTextCodec::setCodecForLocale(utfcodec);
   ui->setupUi(this);
 
-  QTimer *timer = nullptr;
+  speakerTimer = nullptr;
 
     updatePointsList();
     QApplication::setStyle(new NorwegianWoodStyle);
@@ -328,6 +342,8 @@ void MainWindow::fromIDChanged(unsigned char value)
 
 void MainWindow::updateState(const QByteArray &state)
 {
+    QStringList alarmList;
+    QStringList pointAlarms;
     QList<QTreeWidgetItem *> items = ui->treeWidget->findItems(
                 QString("*"), Qt::MatchWrap | Qt::MatchWildcard | Qt::MatchRecursive);
     bool gate_alarm = false;
@@ -342,6 +358,9 @@ void MainWindow::updateState(const QByteArray &state)
                 gateItem = item->parent();
                 item->setBackgroundColor(0, QColor(255,0,0,150));
                 item->setText(1,QString::number(cnt) + "  (ожидается "+QString::number(point_cnt)+")");
+                alarmList.append(gateItem->text(0)+": Число подключенных точек - " + QString::number(cnt));
+                alarmList.append("(ожидается " + QString::number(point_cnt)+")");
+                alarmList.append("");
             }
         }else if(item->whatsThis(1)=="gate_di1") {
             QString res = "выкл";
@@ -392,6 +411,7 @@ void MainWindow::updateState(const QByteArray &state)
         }
     }
     for(int i=0;i<100;i++) {
+        pointAlarms.clear();
         bool point_alarm = false;
         QTreeWidgetItem *pointItem = nullptr;
         QString link_audio = "p_"+QString::number(i+1)+"_audio";
@@ -416,9 +436,9 @@ void MainWindow::updateState(const QByteArray &state)
                 uint8_t bit_num_break = (16+i*10+2)%8;
                 uint8_t bit_num_short = (16+i*10+3)%8;
                 if(state.at(byte_num_state)&(1<<bit_num_state)) res = "вкл";
-                else if(state.at(byte_num_break)&(1<<bit_num_break)) {res = "обрыв";alarm=true;}
-                else if(state.at(byte_num_short)&(1<<bit_num_short)) {res = "замыкание";alarm=true;}
-                else {alarm=true;}
+                else if(state.at(byte_num_break)&(1<<bit_num_break)) {res = "обрыв";alarm=true;pointAlarms.append("ВХОД1(КТВ) - ОБРЫВ");}
+                else if(state.at(byte_num_short)&(1<<bit_num_short)) {res = "замыкание";alarm=true;pointAlarms.append("ВХОД1(КТВ) - ЗАМЫКАНИЕ");}
+                else {alarm=true;pointAlarms.append("ВХОД1(КТВ) - ВЫКЛ");}
                 pointItem = item->parent();
                 item->setBackgroundColor(0, QColor(255,255,255,0));
                 if(alarm) {
@@ -427,7 +447,6 @@ void MainWindow::updateState(const QByteArray &state)
                 }
                 item->setText(1,res);
             }else if(item->whatsThis(1)==link_di2) {
-
                 QString res = "выкл";
                 uint16_t byte_num_state = 232 + (16+i*10+4)/8;
                 uint16_t byte_num_break = 232 + (16+i*10+5)/8;
@@ -463,6 +482,7 @@ void MainWindow::updateState(const QByteArray &state)
                 item->setText(1,res);
                 item->setBackgroundColor(0, QColor(255,255,255,0));
                 if(alarm) {
+                    pointAlarms.append("НЕИСПРАВНОСТЬ ДИНАМИКОВ");
                     point_alarm = true;
                     item->setBackgroundColor(0, QColor(255,0,0,150));
                 }
@@ -472,6 +492,9 @@ void MainWindow::updateState(const QByteArray &state)
             pointItem->setBackgroundColor(0, QColor(255,255,255,0));
             gateItem = pointItem->parent();
             if(point_alarm) {
+                alarmList.append(pointItem->text(0)+":");
+                alarmList.append(pointAlarms);
+                alarmList.append("");
                 gate_alarm = true;
                 pointItem->setBackgroundColor(0, QColor(255,0,0,150));
             }
@@ -484,6 +507,7 @@ void MainWindow::updateState(const QByteArray &state)
             gateItem->setBackgroundColor(0, QColor(255,0,0,150));
         }
     }
+    updateAlarmList(alarmList);
 }
 
 void MainWindow::checkAudio()

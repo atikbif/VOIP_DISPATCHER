@@ -25,7 +25,7 @@ class UDPWorker : public QObject
 
     mutable QMutex mutex;
     static quint16 id;
-    static const int wait_time_ms = 10;
+    static const int wait_time_ms = 30;
     quint8 toID = 0xFF;
     quint8 fromID = 0x00;
 

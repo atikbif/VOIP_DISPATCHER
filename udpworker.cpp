@@ -262,15 +262,15 @@ void UDPWorker::scan()
                                     if(decodeBufOffset>=sizeof (decodeBuf)) decodeBufOffset=0;
                                     emit updateAudio(inp);
                                   }else {
-                                      /*QString arr;
-                                      for(int i=0;i<cnt;i++) arr+=QString::number((unsigned char)receiveBuf[i],16)+" ";
-                                      qDebug() << "!!!" << frame_size << i << pckt_cnt << pckt_length.at(i) << cnt << arr << fromID << toID;*/
+                                      //QString arr;
+                                      //for(int i=0;i<cnt;i++) arr+=QString::number((unsigned char)receiveBuf[i],16)+" ";
+                                      //qDebug() << "!!!" << frame_size << i << pckt_cnt << pckt_length.at(i) << cnt << arr << fromID << toID;
                                   }
                               }
                               //qDebug() << "P:" << pckt_cnt << pckt_length;
                           }
                       }else {
-                          //qDebug() << "P:" << pckt_cnt << pckt_length << QByteArray::fromRawData(receiveBuf,100);
+                         // qDebug() << "P:" << pckt_cnt << pckt_length << QByteArray::fromRawData(receiveBuf,100);
                       }
 
                   }

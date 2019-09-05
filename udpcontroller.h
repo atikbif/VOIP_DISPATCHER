@@ -27,6 +27,8 @@ signals:
     void updateAudio(QByteArray data);
     void fromIDSignal(unsigned char value);
     void updateState(const QByteArray &data);
+    void startRecord(uint8_t gr, uint8_t point);
+    void stopRecord();
 public slots:
 };
 

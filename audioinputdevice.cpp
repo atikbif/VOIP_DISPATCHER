@@ -107,7 +107,7 @@ qint64 AudioInputDevice::writeData(const char *data, qint64 len)
         }
         len-=320;offset+=320;
     }
-   // qDebug()<<pckt_cnt << ":" << udpBuf;
+    //qDebug()<<pckt_cnt;
 
     sendUDPData(udpBuf);
     return res;

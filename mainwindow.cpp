@@ -4,6 +4,8 @@
 #include<QTextCodec>
 #include "norwegianwoodstyle.h"
 #include "dialogconfig.h"
+#include <QProcess>
+
 
 QAudioDeviceInfo MainWindow::getInpDevice(const QString &name)
 {
@@ -28,7 +30,6 @@ void MainWindow::setTimerInterval(int value)
         speakerTimer = nullptr;
     }
     speakerTimer = new QTimer(this);
-    //timer->moveToThread(this->thread());
     connect(speakerTimer, SIGNAL(timeout()), this, SLOT(checkAudio()));
     if(value) {
         speakerTimer->setInterval(value*1000);
@@ -156,7 +157,10 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
   QTextCodec::setCodecForLocale(utfcodec);
   ui->setupUi(this);
 
+  qRegisterMetaType<uint8_t>("uint8_t");
+
   speakerTimer = nullptr;
+  dispRecorder = nullptr;
 
     updatePointsList();
     QApplication::setStyle(new NorwegianWoodStyle);
@@ -210,6 +214,8 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
     connect(udpScanner, &UDPController::linkStateChanged,this,&MainWindow::linkStatechanged);
     connect(udpScanner, &UDPController::fromIDSignal,this,&MainWindow::fromIDChanged);
     connect(udpScanner, &UDPController::updateState,this,&MainWindow::updateState);
+    connect(udpScanner, &UDPController::startRecord,this,&MainWindow::startRecord);
+    connect(udpScanner, &UDPController::stopRecord,this,&MainWindow::stopRecord);
 
     ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :lightgray;}");
 
@@ -515,6 +521,16 @@ void MainWindow::checkAudio()
     on_pushButtonCheckAudio_clicked();
 }
 
+void MainWindow::startRecord(uint8_t gr, uint8_t point)
+{
+    m_audiOutputDevice->startRecordCmd(gr,point);
+}
+
+void MainWindow::stopRecord()
+{
+    m_audiOutputDevice->stopRecordCmd();
+}
+
 void MainWindow::radioButton_toggled(bool checked)
 {
     if(checked) {
@@ -529,6 +545,10 @@ void MainWindow::radioButton_toggled(bool checked)
 
 void MainWindow::on_checkBox_clicked()
 {
+    static QString fName;
+    static QStack<QProcess*> procs;
+    static QStack<QString> wafFiles;
+    static qint64 startTime = 0;
     udpScanner->setSilentMode(ui->checkBox->isChecked());
     if(ui->checkBox->isChecked()) {
         ui->checkBox->setToolTip("режим прослушивания");
@@ -537,6 +557,61 @@ void MainWindow::on_checkBox_clicked()
     else {
         ui->checkBox->setToolTip("режим передачи голоса");
         ui->checkBox->setText("РЕЖИМ ВЕЩАНИЯ");
+    }
+    if(dispRecorder) {
+        dispRecorder->stop();
+        delete dispRecorder;
+        QString inpName = fName;
+        QString outName = fName;
+        outName.replace("wav","mp3");
+        while(QFile::exists(outName)) {
+            outName.remove(".mp3");
+            outName+="_again.mp3";
+        }
+        QProcess *process = new QProcess;
+        QDir dir(QCoreApplication::applicationDirPath());;
+        process->setProgram(dir.absolutePath()+"/utils/ffmpeg.exe");
+        process->setArguments(QStringList() << "-loglevel" << "fatal" << "-i" << inpName << "-codec:a" << "libmp3lame" << "-qscale:a" << "5" << outName);
+        process->start();
+        procs.append(process);
+        wafFiles.append(inpName);
+
+        QTimer::singleShot(10000, this, [=](){if(!procs.isEmpty()) {QProcess* pr = procs.pop();pr->kill();delete pr;}
+            if(!wafFiles.isEmpty()){QString file = wafFiles.pop();if(QFile::exists(file)) QFile::remove(file);}});
+
+        /*connect(process, static_cast<void(QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished),
+               [=](int , QProcess::ExitStatus ){ process->deleteLater(); QFile::remove(inpName);});*/
+
+        dispRecorder = nullptr;
+    }
+    if(buttonCmd == STOP) {
+        if(ui->checkBox->isChecked()) {
+
+        }else {
+            dispRecorder = new QAudioRecorder;
+            audioSettings.setCodec("audio/pcm");
+            audioSettings.setChannelCount(1);
+            audioSettings.setBitRate(128*1024);
+            audioSettings.setSampleRate(8000);
+            audioSettings.setEncodingMode(QMultimedia::AverageBitRateEncoding);
+
+            dispRecorder->setAudioInput(ui->comboBoxInput->currentText());
+            dispRecorder->setEncodingSettings(audioSettings);
+            dispRecorder->setContainerFormat("wav");
+            fName = QCoreApplication::applicationDirPath() + "/audio/disp";
+            fName+= QDateTime::currentDateTime().toString("_dd_MM_yyyy_hh_mm_ss") + ".wav";
+            while(QFile::exists(fName)) {fName.remove(".wav");fName+="_again.wav";}
+            QUrl url = QUrl::fromLocalFile(fName);
+            dispRecorder->setOutputLocation(url);
+            dispRecorder->record();
+            startTime = QDateTime::currentMSecsSinceEpoch();
+            QTimer::singleShot(300000, this, [=](){
+                qint64 t = QDateTime::currentMSecsSinceEpoch();
+                if(t-startTime>=295000) {
+                    on_checkBox_clicked();
+                }
+            });
+        }
     }
 }
 

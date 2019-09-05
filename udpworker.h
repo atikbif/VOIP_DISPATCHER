@@ -7,6 +7,7 @@
 #include <QByteArray>
 //#include "speex/speex.h"
 #include "opus.h"
+#include <QDateTime>
 
 class UDPWorker : public QObject
 {
@@ -28,6 +29,9 @@ class UDPWorker : public QObject
     static const int wait_time_ms = 30;
     quint8 toID = 0xFF;
     quint8 fromID = 0x00;
+
+    bool startFlag = false;
+    qint64 startTime;
 
     QByteArray createRequestWriteAudio(const QByteArray &input, bool silentMode = false);
     QByteArray createRequestCheckLink();
@@ -56,6 +60,8 @@ signals:
   void updateAudio(QByteArray data);
   void updateState(const QByteArray &data);
   void fromIDSignal(unsigned char value);
+  void startRecord(uint8_t gr, uint8_t point);
+  void stopRecord();
 public slots:
     void scan();
 

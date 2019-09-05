@@ -10,6 +10,8 @@ UDPController::UDPController(QObject *parent) : QObject(parent)
     connect(worker, &UDPWorker::updateAudio,this,&UDPController::updateAudio);
     connect(worker, &UDPWorker::fromIDSignal, this, &UDPController::fromIDSignal);
     connect(worker, &UDPWorker::updateState, this, &UDPController::updateState);
+    connect(worker, &UDPWorker::startRecord, this, &UDPController::startRecord);
+    connect(worker, &UDPWorker::stopRecord, this, &UDPController::stopRecord);
     udpThread.start();
     emit init();
 }

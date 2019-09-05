@@ -194,6 +194,7 @@ void UDPWorker::scan()
     static char decodeBuf[3000];
     static int decodeBufOffset = 0;
 
+
     static int tmp=0;
 
     QUdpSocket udp;
@@ -249,7 +250,11 @@ void UDPWorker::scan()
                           if(fromID>100) fromID = 0;
                           //qDebug() << fromID;
                           if(fromID && (toID==0xFF || toID==fromID)) {
-
+                              if(startFlag==false) {
+                                  startFlag = true;
+                                  emit startRecord((quint8)receiveBuf[3],(quint8)receiveBuf[4]);
+                              }
+                              if(startFlag) startTime = QDateTime::currentMSecsSinceEpoch();
                               int offset = 6+pckt_cnt;
                               decodeBufOffset = 0;
                               int frame_size=0;
@@ -270,75 +275,19 @@ void UDPWorker::scan()
                               //qDebug() << "P:" << pckt_cnt << pckt_length;
                           }
                       }else {
+                          fromID = 0;
+                          emit fromIDSignal(0);
                          // qDebug() << "P:" << pckt_cnt << pckt_length << QByteArray::fromRawData(receiveBuf,100);
                       }
-
                   }
-                  /*int enc_size1 = receiveBuf[6];
-                  int enc_size2 = receiveBuf[7];
-                  decodeBufOffset = 0;
-                  auto frame_size = opus_decode(dec, (unsigned char *)&receiveBuf[8], enc_size1, (opus_int16 *)&decodeBuf[decodeBufOffset], 1024, 0);
-                  if(frame_size>0) {
-                    decodeBufOffset += frame_size * 2;
-                    QByteArray inp = QByteArray::fromRawData(&decodeBuf[0], frame_size * 2);
-                    emit updateAudio(inp);
-                  }
-
-                  qDebug() << "DECODE1" << enc_size1 << frame_size;
-                  frame_size = opus_decode(dec, (unsigned char *)&receiveBuf[8+enc_size1], enc_size2, (opus_int16 *)&decodeBuf[decodeBufOffset], 1024, 0);
-                  if(frame_size>0) {
-                    QByteArray inp = QByteArray::fromRawData(&decodeBuf[decodeBufOffset], frame_size * 2);
-                    emit updateAudio(inp);
-                  }
-                  qDebug() << "DECODE2" << enc_size2 << frame_size;*/
-                }
-                /*char ptr[1024];
-                int cnt=0;
-                for(auto ch:packet) ptr[cnt++]=ch;
-                int offset=0;*/
-
-                  //auto frame_size = opus_decode(dec, (unsigned char*)&ptr[0], cnt, (opus_int16*)&decodeBuf[0], 1024, 0);
-                  //QByteArray inp = QByteArray::fromRawData(&decodeBuf[0],frame_size*2);
-                  //emit updateAudio(inp);
-
-
-
-
-                  //qDebug() << "DECODE" << frame_size;
-                  /*speex_bits_read_from(&bits, &ptr[offset], 20);
-                  speex_decode_int(dec_state, &bits, (spx_int16_t*)&decodeBuf[decodeBufOffset]);
-                  QByteArray inp = QByteArray::fromRawData(&decodeBuf[decodeBufOffset],320);
-                  decodeBufOffset+=320;
-                  emit updateAudio(inp);*/
-                /*mutex.lock();
-                newAudioPacketFlag=0;
-                udp.write(createRequestWriteAudio(packet,silent));
-                mutex.unlock();
-                if(udp.waitForReadyRead(wait_time_ms)) {
-                  qint64 cnt = 0;
-                  while (udp.hasPendingDatagrams()) {
-                    cnt = udp.readDatagram(receiveBuf, sizeof(receiveBuf));
-                    if (cnt==0) break;
-                  }
-                  if(cnt>6+2) {
-                    cnt-=8;
-                    int offset = 6;
-                    if(receiveBuf[5]!=fromID) emit fromIDSignal(receiveBuf[5]);
-                    fromID = receiveBuf[5];
-                    decodeBufOffset = 0;
-                    if(toID==0xFF || toID==fromID)
-                    while(cnt>=20) {
-                      speex_bits_read_from(&bits, &receiveBuf[offset], 20);
-                      speex_decode_int(dec_state, &bits, (spx_int16_t*)&decodeBuf[decodeBufOffset]);
-                      QByteArray inp = QByteArray::fromRawData(&decodeBuf[decodeBufOffset],320);
-                      decodeBufOffset+=320;
-                      emit updateAudio(inp);
-                      cnt-=20;
-                      offset+=20;
-                    }
-                  }
-              }*/
+               }
            }
+        }
+        if(startFlag) {
+            if(QDateTime::currentMSecsSinceEpoch()-startTime>=1000) {
+                startFlag = false;
+                emit stopRecord();
+            }
         }
         if(finishFlagstate) break;
         QThread::msleep(1);

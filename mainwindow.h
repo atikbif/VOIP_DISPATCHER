@@ -8,6 +8,7 @@
 #include <udpcontroller.h>
 #include <QRadioButton>
 #include <QTimer>
+#include <QAudioRecorder>
 
 namespace Ui {
 class MainWindow;
@@ -30,10 +31,14 @@ class MainWindow : public QMainWindow
     QScopedPointer<QAudioOutput> m_qaudioOutput;
 
     UDPController *udpScanner;
+    QAudioRecorder *dispRecorder;
+    QAudioEncoderSettings audioSettings;
 
     QAudioDeviceInfo getInpDevice(const QString &name);
     QAudioDeviceInfo getOutDevice(const QString &name);
     void setTimerInterval(int value);
+
+
 
     QVector<double> x, y;
     QVector<double> x2, y2;
@@ -47,6 +52,7 @@ class MainWindow : public QMainWindow
     void updatePointsList();
     void updateAlarmList(const QStringList &list);
 
+
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
@@ -59,6 +65,8 @@ private slots:
     void fromIDChanged(unsigned char value);
     void updateState(const QByteArray &state);
     void checkAudio();
+    void startRecord(uint8_t gr, uint8_t point);
+    void stopRecord();
 
 void radioButton_toggled(bool checked);
 

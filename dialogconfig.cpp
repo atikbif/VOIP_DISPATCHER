@@ -32,6 +32,22 @@ void DialogConfig::readPoints()
       QString cnt = loadOb["points cnt"].toString();
       ui->spinBoxPointCnt->setValue(cnt.toInt());
     }
+    if(loadOb.contains("ip1")) {
+      QString cnt = loadOb["ip1"].toString();
+      ui->spinBoxIP1->setValue(cnt.toInt());
+    }
+    if(loadOb.contains("ip2")) {
+      QString cnt = loadOb["ip2"].toString();
+      ui->spinBoxIP2->setValue(cnt.toInt());
+    }
+    if(loadOb.contains("ip3")) {
+      QString cnt = loadOb["ip3"].toString();
+      ui->spinBoxIP3->setValue(cnt.toInt());
+    }
+    if(loadOb.contains("ip4")) {
+      QString cnt = loadOb["ip4"].toString();
+      ui->spinBoxIP4->setValue(cnt.toInt());
+    }
     if(loadOb.contains("audio tmr")) {
       QString cnt = loadOb["audio tmr"].toString();
       ui->spinBoxCheckAudioTmr->setValue(cnt.toInt());
@@ -96,6 +112,10 @@ void DialogConfig::accept()
     confObject["points cnt"] = QString::number(ui->spinBoxPointCnt->value());
     confObject["audio tmr"] = QString::number(ui->spinBoxCheckAudioTmr->value());
     confObject["points"] = pointsArray;
+    confObject["ip1"] = QString::number(ui->spinBoxIP1->value());
+    confObject["ip2"] = QString::number(ui->spinBoxIP2->value());
+    confObject["ip3"] = QString::number(ui->spinBoxIP3->value());
+    confObject["ip4"] = QString::number(ui->spinBoxIP4->value());
     QJsonDocument confDoc(confObject);
     confFile.write(confDoc.toJson());
     confFile.close();

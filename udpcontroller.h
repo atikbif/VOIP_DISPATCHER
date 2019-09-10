@@ -12,7 +12,7 @@ class UDPController : public QObject
     QThread udpThread;
     UDPWorker *worker;
 public:
-    explicit UDPController(QObject *parent = nullptr);
+    explicit UDPController(const QString &ip, QObject *parent = nullptr);
     ~UDPController();
     void start();
     void stop();
@@ -20,6 +20,7 @@ public:
     void setToID(unsigned char id);
     void setSilentMode(bool value) {worker->setSilentMode(value);}
     void checkAudio();
+    void setIP(const QString &ip) {worker->setIP(ip);}
 
 signals:
     void init();

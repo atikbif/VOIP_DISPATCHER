@@ -52,6 +52,8 @@ class MainWindow : public QMainWindow
     void updatePointsList();
     void updateAlarmList(const QStringList &list);
 
+    int ip1,ip2,ip3,ip4;
+
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);

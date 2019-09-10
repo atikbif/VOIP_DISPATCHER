@@ -91,9 +91,23 @@ void MainWindow::updatePointsList()
           audio_tmr = loadOb["audio tmr"].toString().toInt();
           setTimerInterval(60*audio_tmr);
         }
+        if (loadOb.contains("ip1")) {
+          ip1 = loadOb["ip1"].toString().toInt();
+        }
+        if (loadOb.contains("ip2")) {
+          ip2 = loadOb["ip2"].toString().toInt();
+        }
+        if (loadOb.contains("ip3")) {
+          ip3 = loadOb["ip3"].toString().toInt();
+        }
+        if (loadOb.contains("ip4")) {
+          ip4 = loadOb["ip4"].toString().toInt();
+        }
+        //if(udpScanner!=nullptr) udpScanner->setIP(QString::number(ip1)+"."+QString::number(ip2)+"."+QString::number(ip3)+"."+QString::number(ip4));
         if (loadOb.contains("points") && loadOb["points"].isArray()) {
           QJsonArray jsPoints = loadOb["points"].toArray();
         point_cnt = p_cnt;
+        points.clear();
         for (int i = 0; i < p_cnt; ++i) {
             QJsonObject pointOb = jsPoints[i].toObject();
             QTreeWidgetItem *treeItem = new QTreeWidgetItem(QStringList()<<pointOb["name"].toString());
@@ -161,6 +175,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
 
   speakerTimer = nullptr;
   dispRecorder = nullptr;
+  udpScanner = nullptr;
 
     updatePointsList();
     QApplication::setStyle(new NorwegianWoodStyle);
@@ -184,7 +199,11 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
         if(!outDevices.contains(devName)) outDevices.append(devName);
     }
     for(QString name:outDevices) {ui->comboBoxOut->addItem(name);}
-    udpScanner = new UDPController();
+    QString ip = QString::number((quint8)ip1) + ".";
+    ip += QString::number((quint8)ip2) + ".";
+    ip += QString::number((quint8)ip3) + ".";
+    ip += QString::number((quint8)ip4);
+    udpScanner = new UDPController(ip);
 
 
     for(int i = 0; i < 1000; i++)
@@ -277,6 +296,7 @@ void MainWindow::on_pushButtonStartStop_clicked()
         ui->comboBoxInput->setEnabled(false);
         ui->comboBoxOut->setEnabled(false);
 
+        udpScanner->setIP(QString::number(ip1)+"."+QString::number(ip2)+"."+QString::number(ip3)+"."+QString::number(ip4));
         udpScanner->start();
         linkState = false;
 

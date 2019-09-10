@@ -135,7 +135,7 @@ void UDPWorker::checkAudioCmd(QUdpSocket &udp)
     }
 }
 
-UDPWorker::UDPWorker(QObject *parent) : QObject(parent)
+UDPWorker::UDPWorker(const QString &ip, QObject *parent) : ip(ip), QObject(parent)
 {
   //int tmp = 0;
   int error = 0;
@@ -198,7 +198,10 @@ void UDPWorker::scan()
     static int tmp=0;
 
     QUdpSocket udp;
-    udp.connectToHost(QHostAddress("192.168.5.85"),12145);
+    //udp.connectToHost(QHostAddress("192.168.5.85"),12145);
+    //udp.connectToHost(QHostAddress(ip),12145);
+    //QThread::msleep(100);
+    //connect(udp,&QUdpSocket::hostFound,[](){});
     for(;;) {
         mutex.lock();
         workFlagState = workFlag;
@@ -207,81 +210,92 @@ void UDPWorker::scan()
         checkAudioFlagState = checkAudioFlag;
         mutex.unlock();
         if(workFlagState) {
-            check_cnt++;
-            if(check_cnt>=30) {
-                check_cnt = 0;
-                //checkLink(udp);
-
-                if(checkAudioFlagState) {
-                    checkAudioFlagState = false;
-                    mutex.lock();
-                    checkAudioFlag = false;
-                    mutex.unlock();
-                    checkAudioCmd(udp);
-                }else {
-                    readState(udp);
-                }
+            if(udp.state()==QUdpSocket::UnconnectedState) {
+                udp.connectToHost(QHostAddress(ip),12145);
+                qDebug() << "TRY CONNECT" << ip;
+                //QThread::msleep(100);
             }
-            if(newAudioPacketFlagState) {
-                mutex.lock();
-                newAudioPacketFlag=0;
-                udp.write(createRequestWriteAudio(packet,silent));
-                mutex.unlock();
-                if (udp.waitForReadyRead(wait_time_ms)) {
-                  qint64 cnt = 0;
-                  while (udp.hasPendingDatagrams()) {
-                    cnt = udp.readDatagram(receiveBuf, sizeof(receiveBuf));
-                    if (cnt==0) break;
-                  }
-                  if(silent && (receiveBuf[2]==0x01 || receiveBuf[2]==0x02)) {
-                      int pckt_cnt = receiveBuf[5];
-                      bool check_length = true;
-                      std::vector<int> pckt_length;
-                      if(pckt_cnt<=0 || pckt_cnt>5) check_length=false;
-                      if(check_length) {
-                          for(int i=0;i<pckt_cnt;i++) pckt_length.push_back((quint8)receiveBuf[6+i]);
-                          check_length = false;
-                          for(int l:pckt_length) if(l) check_length=true;
-                      }
+            //if(udp.state()==QUdpSocket::ConnectedState)
+            {
+                check_cnt++;
+                if(check_cnt>=30) {
+                    check_cnt = 0;
+                    //checkLink(udp);
 
-                      if(check_length) {
-                          if((quint8)receiveBuf[4]!=fromID  && ((quint8)receiveBuf[4]<100)) emit fromIDSignal((quint8)receiveBuf[4]);
-                          fromID = (quint8)receiveBuf[4];
-                          if(fromID>100) fromID = 0;
-                          //qDebug() << fromID;
-                          if(fromID && (toID==0xFF || toID==fromID)) {
-                              if(startFlag==false) {
-                                  startFlag = true;
-                                  emit startRecord((quint8)receiveBuf[3],(quint8)receiveBuf[4]);
-                              }
-                              if(startFlag) startTime = QDateTime::currentMSecsSinceEpoch();
-                              int offset = 6+pckt_cnt;
-                              decodeBufOffset = 0;
-                              int frame_size=0;
-                              for(int i=0;i<pckt_cnt;i++) {
-                                  frame_size = opus_decode(dec, (unsigned char *)&receiveBuf[offset], pckt_length.at(i), (opus_int16 *)&decodeBuf[decodeBufOffset], 1024, 0);
-                                  offset+=pckt_length.at(i);
-                                  if(frame_size==160) {
-                                    QByteArray inp = QByteArray::fromRawData(&decodeBuf[decodeBufOffset], frame_size * 2);
-                                    decodeBufOffset += frame_size * 2;
-                                    if(decodeBufOffset>=sizeof (decodeBuf)) decodeBufOffset=0;
-                                    emit updateAudio(inp);
-                                  }else {
-                                      //QString arr;
-                                      //for(int i=0;i<cnt;i++) arr+=QString::number((unsigned char)receiveBuf[i],16)+" ";
-                                      //qDebug() << "!!!" << frame_size << i << pckt_cnt << pckt_length.at(i) << cnt << arr << fromID << toID;
-                                  }
-                              }
-                              //qDebug() << "P:" << pckt_cnt << pckt_length;
-                          }
-                      }else {
-                          fromID = 0;
-                          emit fromIDSignal(0);
-                         // qDebug() << "P:" << pckt_cnt << pckt_length << QByteArray::fromRawData(receiveBuf,100);
+                    if(checkAudioFlagState) {
+                        checkAudioFlagState = false;
+                        mutex.lock();
+                        checkAudioFlag = false;
+                        mutex.unlock();
+                        checkAudioCmd(udp);
+                    }else {
+                        readState(udp);
+                    }
+                }
+                if(newAudioPacketFlagState) {
+                    mutex.lock();
+                    newAudioPacketFlag=0;
+                    udp.write(createRequestWriteAudio(packet,silent));
+                    mutex.unlock();
+                    if (udp.waitForReadyRead(wait_time_ms)) {
+                      qint64 cnt = 0;
+                      while (udp.hasPendingDatagrams()) {
+                        cnt = udp.readDatagram(receiveBuf, sizeof(receiveBuf));
+                        if (cnt==0) break;
                       }
-                  }
+                      if(silent && (receiveBuf[2]==0x01 || receiveBuf[2]==0x02)) {
+                          int pckt_cnt = receiveBuf[5];
+                          bool check_length = true;
+                          std::vector<int> pckt_length;
+                          if(pckt_cnt<=0 || pckt_cnt>5) check_length=false;
+                          if(check_length) {
+                              for(int i=0;i<pckt_cnt;i++) pckt_length.push_back((quint8)receiveBuf[6+i]);
+                              check_length = false;
+                              for(int l:pckt_length) if(l) check_length=true;
+                          }
+
+                          if(check_length) {
+                              if((quint8)receiveBuf[4]!=fromID  && ((quint8)receiveBuf[4]<100)) emit fromIDSignal((quint8)receiveBuf[4]);
+                              fromID = (quint8)receiveBuf[4];
+                              if(fromID>100) fromID = 0;
+                              //qDebug() << fromID;
+                              if(fromID && (toID==0xFF || toID==fromID)) {
+                                  if(startFlag==false) {
+                                      startFlag = true;
+                                      emit startRecord((quint8)receiveBuf[3],(quint8)receiveBuf[4]);
+                                  }
+                                  if(startFlag) startTime = QDateTime::currentMSecsSinceEpoch();
+                                  int offset = 6+pckt_cnt;
+                                  decodeBufOffset = 0;
+                                  int frame_size=0;
+                                  for(int i=0;i<pckt_cnt;i++) {
+                                      frame_size = opus_decode(dec, (unsigned char *)&receiveBuf[offset], pckt_length.at(i), (opus_int16 *)&decodeBuf[decodeBufOffset], 1024, 0);
+                                      offset+=pckt_length.at(i);
+                                      if(frame_size==160) {
+                                        QByteArray inp = QByteArray::fromRawData(&decodeBuf[decodeBufOffset], frame_size * 2);
+                                        decodeBufOffset += frame_size * 2;
+                                        if(decodeBufOffset>=sizeof (decodeBuf)) decodeBufOffset=0;
+                                        emit updateAudio(inp);
+                                      }else {
+                                          //QString arr;
+                                          //for(int i=0;i<cnt;i++) arr+=QString::number((unsigned char)receiveBuf[i],16)+" ";
+                                          //qDebug() << "!!!" << frame_size << i << pckt_cnt << pckt_length.at(i) << cnt << arr << fromID << toID;
+                                      }
+                                  }
+                                  //qDebug() << "P:" << pckt_cnt << pckt_length;
+                              }
+                          }else {
+                              fromID = 0;
+                              emit fromIDSignal(0);
+                             // qDebug() << "P:" << pckt_cnt << pckt_length << QByteArray::fromRawData(receiveBuf,100);
+                          }
+                      }
+                   }
                }
-           }
+            }
+
+        }else {
+            if(udp.state()!=QUdpSocket::UnconnectedState) udp.disconnectFromHost();
         }
         if(startFlag) {
             if(QDateTime::currentMSecsSinceEpoch()-startTime>=1000) {

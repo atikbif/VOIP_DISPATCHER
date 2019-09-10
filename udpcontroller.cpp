@@ -1,8 +1,8 @@
 #include "udpcontroller.h"
 
-UDPController::UDPController(QObject *parent) : QObject(parent)
+UDPController::UDPController(const QString &ip, QObject *parent) : QObject(parent)
 {
-    worker = new UDPWorker;
+    worker = new UDPWorker(ip);
     worker->moveToThread(&udpThread);
     connect(&udpThread, &QThread::finished, worker, &QObject::deleteLater);
     connect(this, &UDPController::init, worker, &UDPWorker::scan);

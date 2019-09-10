@@ -43,9 +43,10 @@ class UDPWorker : public QObject
     void checkLink(QUdpSocket &udp);
     void readState(QUdpSocket &udp);
     void checkAudioCmd(QUdpSocket &udp);
+    QString ip;
 
 public:
-    explicit UDPWorker(QObject *parent = nullptr);
+    explicit UDPWorker(const QString &ip, QObject *parent = nullptr);
     void start();
     void stop();
     void finish();
@@ -53,6 +54,7 @@ public:
     bool getLinkState() const;
     void setToID(unsigned char id) {toID = id;}
     void setSilentMode(bool value) {silent=value;}
+    void setIP(const QString &value) {ip=value;qDebug()<<ip;}
     void checkAudio();
 
 signals:

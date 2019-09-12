@@ -1,10 +1,11 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QDebug>
-#include<QTextCodec>
+#include <QTextCodec>
 #include "norwegianwoodstyle.h"
 #include "dialogconfig.h"
 #include <QProcess>
+#include <QMessageBox>
 
 
 QAudioDeviceInfo MainWindow::getInpDevice(const QString &name)
@@ -107,6 +108,7 @@ void MainWindow::updatePointsList()
         if (loadOb.contains("points") && loadOb["points"].isArray()) {
           QJsonArray jsPoints = loadOb["points"].toArray();
         point_cnt = p_cnt;
+        manager->setPointCnt(point_cnt);
         points.clear();
         for (int i = 0; i < p_cnt; ++i) {
             QJsonObject pointOb = jsPoints[i].toObject();
@@ -154,14 +156,17 @@ void MainWindow::updatePointsList()
 void MainWindow::updateAlarmList(const QStringList &list)
 {
     ui->listWidgetAlarm->clear();
-    if(list.isEmpty()) {
-        ui->listWidgetAlarm->addItem("Аварии отсутствуют");
-        ui->listWidgetAlarm->item(0)->setBackgroundColor(QColor(Qt::green));
+    QStringList newList;
+    if(linkState==false && buttonCmd==STOP) newList.append("АВАРИЯ (Обрыв Ethernet связи)");
+    newList.append(list);
+    if(newList.isEmpty()) {
+        ui->listWidgetAlarm->addItem("Параметры в норме");
+        ui->listWidgetAlarm->item(0)->setBackgroundColor(QColor(0,255,0,150));
     }else {
-
-        ui->listWidgetAlarm->addItems(list);
-        for(int i=0;i<list.length();i++) {
-            ui->listWidgetAlarm->item(i)->setBackgroundColor(QColor(Qt::red));
+        ui->listWidgetAlarm->addItems(newList);
+        for(int i=0;i<newList.length();i++) {
+            if(newList.at(i).toLower().contains("авария")) ui->listWidgetAlarm->item(i)->setBackgroundColor(QColor(255,0,0,150));
+            else if(newList.at(i).toLower().contains("предупреждение")) ui->listWidgetAlarm->item(i)->setBackgroundColor(QColor(255,255,0,150));
         }
     }
 }
@@ -176,6 +181,12 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
   speakerTimer = nullptr;
   dispRecorder = nullptr;
   udpScanner = nullptr;
+
+  manager = new SQLManager();
+  connect(manager,&SQLManager::error,this,&MainWindow::sqlError);
+  connect(manager,&SQLManager::updateAlarmList,this,&MainWindow::updateAlarmList);
+  manager->initDB();
+  manager->insertMessage("Запуск приложения","info");
 
     updatePointsList();
     QApplication::setStyle(new NorwegianWoodStyle);
@@ -203,6 +214,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
     ip += QString::number((quint8)ip2) + ".";
     ip += QString::number((quint8)ip3) + ".";
     ip += QString::number((quint8)ip4);
+    manager->setIP(ip);
     udpScanner = new UDPController(ip);
 
 
@@ -242,6 +254,12 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
 
     ui->checkBox->setStyleSheet("QCheckBox::indicator {width: 64px; height: 64px; } QCheckBox::indicator:unchecked { image: url(:/speak.png); } QCheckBox::indicator:checked { image: url(:/listen.png); }");
     ui->checkBox->click();
+
+    QFont font = QFont ("Courier");
+    font.setStyleHint (QFont::Monospace);
+    font.setPointSize (12);
+    font.setFixedPitch (true);
+    ui->listWidgetAlarm->setFont(font);
     //timer->start();
 
     //showMaximized();
@@ -271,6 +289,7 @@ void MainWindow::on_pushButtonStartStop_clicked()
 
 
     if (buttonCmd == START) {
+        manager->insertMessage("Запуск опроса","info");
         m_audioInputDevice.reset(new AudioInputDevice(format,udpScanner));
         connect(m_audioInputDevice.data(),&AudioInputDevice::newLevel,this,&MainWindow::newLevel);
         m_qaudioInput.reset(new QAudioInput(inpDeviceInfo, format));
@@ -295,16 +314,16 @@ void MainWindow::on_pushButtonStartStop_clicked()
 
         ui->comboBoxInput->setEnabled(false);
         ui->comboBoxOut->setEnabled(false);
-
-        udpScanner->setIP(QString::number(ip1)+"."+QString::number(ip2)+"."+QString::number(ip3)+"."+QString::number(ip4));
+        QString ip = QString::number(ip1)+"."+QString::number(ip2)+"."+QString::number(ip3)+"."+QString::number(ip4);
+        udpScanner->setIP(ip);
+        manager->setIP(ip);
         udpScanner->start();
         linkState = false;
-
-        QTimer::singleShot(1000, this, [this](){if(linkState==false) ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :red; }");});
+        QTimer::singleShot(1000, this, [this](){if(linkState==false) {ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :red; }");manager->insertMessage("нет связи","alarm");}});
 
 
     }else {
-
+        manager->insertMessage("Остановка опроса","info");
         m_qaudioInput->suspend();
         m_audioInputDevice->stop();
         //m_qaudioOutput->suspend();
@@ -344,11 +363,15 @@ void MainWindow::newOutLevel(const QVector<double> &inp)
 
 void MainWindow::linkStatechanged(bool value)
 {
+    //qDebug() << value;
   if(value) {
+      manager->insertMessage("Связь установлена","info");
     linkState = true;
     ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :green; }");
   }else {
+    manager->insertMessage("Нет связи","alarm");
     linkState = false;
+    updateAlarmList(QStringList());
     ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :red; }");
   }
 }
@@ -384,8 +407,9 @@ void MainWindow::updateState(const QByteArray &state)
                 gateItem = item->parent();
                 item->setBackgroundColor(0, QColor(255,0,0,150));
                 item->setText(1,QString::number(cnt) + "  (ожидается "+QString::number(point_cnt)+")");
-                alarmList.append(gateItem->text(0)+": Число подключенных точек - " + QString::number(cnt));
-                alarmList.append("(ожидается " + QString::number(point_cnt)+")");
+                alarmList.append(gateItem->text(0)+":");
+                alarmList.append("АВАРИЯ: Число подключенных точек - " + QString::number(cnt));
+                alarmList.append("ожидается " + QString::number(point_cnt));
                 alarmList.append("");
             }
         }else if(item->whatsThis(1)=="gate_di1") {
@@ -436,6 +460,7 @@ void MainWindow::updateState(const QByteArray &state)
             else item->setText(1,"выкл");
         }
     }
+    manager->insertData(state);
     for(int i=0;i<100;i++) {
         pointAlarms.clear();
         bool point_alarm = false;
@@ -449,7 +474,9 @@ void MainWindow::updateState(const QByteArray &state)
         QString link_do2 = "p_"+QString::number(i+1)+"_do2";
         for(QTreeWidgetItem *item:items) {
             if(item->whatsThis(1)==link_pow) {
-                item->setText(1,QString::number((double)((quint8)state.at(32+i*2+1))/10)+" В");
+                QString pow = QString::number((double)((quint8)state.at(32+i*2+1))/10);
+
+                item->setText(1,pow + " В");
             }else if(item->whatsThis(1)==link_acc) {
                 item->setText(1,QString::number((double)((quint8)state.at(32+i*2))/10)+" В");
             }else if(item->whatsThis(1)==link_di1) {
@@ -462,9 +489,9 @@ void MainWindow::updateState(const QByteArray &state)
                 uint8_t bit_num_break = (16+i*10+2)%8;
                 uint8_t bit_num_short = (16+i*10+3)%8;
                 if(state.at(byte_num_state)&(1<<bit_num_state)) res = "вкл";
-                else if(state.at(byte_num_break)&(1<<bit_num_break)) {res = "обрыв";alarm=true;pointAlarms.append("ВХОД1(КТВ) - ОБРЫВ");}
-                else if(state.at(byte_num_short)&(1<<bit_num_short)) {res = "замыкание";alarm=true;pointAlarms.append("ВХОД1(КТВ) - ЗАМЫКАНИЕ");}
-                else {alarm=true;pointAlarms.append("ВХОД1(КТВ) - ВЫКЛ");}
+                else if(state.at(byte_num_break)&(1<<bit_num_break)) {res = "обрыв";alarm=true;pointAlarms.append("АВАРИЯ ВХОД1(КТВ) - ОБРЫВ");}
+                else if(state.at(byte_num_short)&(1<<bit_num_short)) {res = "замыкание";alarm=true;pointAlarms.append("АВАРИЯ ВХОД1(КТВ) - ЗАМЫКАНИЕ");}
+                else {alarm=true;pointAlarms.append("АВАРИЯ ВХОД1(КТВ) - ВЫКЛ");}
                 pointItem = item->parent();
                 item->setBackgroundColor(0, QColor(255,255,255,0));
                 if(alarm) {
@@ -508,7 +535,7 @@ void MainWindow::updateState(const QByteArray &state)
                 item->setText(1,res);
                 item->setBackgroundColor(0, QColor(255,255,255,0));
                 if(alarm) {
-                    pointAlarms.append("НЕИСПРАВНОСТЬ ДИНАМИКОВ");
+                    pointAlarms.append("АВАРИЯ НЕИСПРАВНОСТЬ ДИНАМИКОВ");
                     point_alarm = true;
                     item->setBackgroundColor(0, QColor(255,0,0,150));
                 }
@@ -551,13 +578,17 @@ void MainWindow::stopRecord()
     m_audiOutputDevice->stopRecordCmd();
 }
 
+void MainWindow::sqlError(const QString &message)
+{
+    QMessageBox::critical(nullptr, tr("VOIP ДИспетчер"),message);
+}
+
 void MainWindow::radioButton_toggled(bool checked)
 {
     if(checked) {
         QRadioButton *rb = dynamic_cast<QRadioButton*>(sender());
         if(rb) {
             int id = rb->property("id").toInt();
-            //qDebug() << id;
             udpScanner->setToID(id);
         }
     }
@@ -573,10 +604,12 @@ void MainWindow::on_checkBox_clicked()
     if(ui->checkBox->isChecked()) {
         ui->checkBox->setToolTip("режим прослушивания");
         ui->checkBox->setText("РЕЖИМ ПРОСЛУШИВАНИЯ");
+        manager->insertMessage("РЕЖИМ ПРОСЛУШИВАНИЯ","info");
     }
     else {
         ui->checkBox->setToolTip("режим передачи голоса");
         ui->checkBox->setText("РЕЖИМ ВЕЩАНИЯ");
+        manager->insertMessage("РЕЖИМ ВЕЩАНИЯ","info");
     }
     if(dispRecorder) {
         dispRecorder->stop();

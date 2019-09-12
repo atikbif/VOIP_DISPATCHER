@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui multimedia network printsupport
+QT       += core gui multimedia network printsupport sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -89,6 +89,8 @@ SOURCES += \
 #        speex-1.2.0/libspeex/window.c \
     audioinputdevice.cpp \
     checksum.cpp \
+    sqldriver.cpp \
+    sqlmanager.cpp \
     udpworker.cpp \
     udpcontroller.cpp \
     qcustomplot.cpp \
@@ -276,6 +278,8 @@ HEADERS += \
         mainwindow.h \
     audioinputdevice.h \
     checksum.h \
+    sqldriver.h \
+    sqlmanager.h \
     udpworker.h \
     udpcontroller.h \
     qcustomplot.h \

@@ -9,6 +9,7 @@
 #include <QRadioButton>
 #include <QTimer>
 #include <QAudioRecorder>
+#include "sqlmanager.h"
 
 namespace Ui {
 class MainWindow;
@@ -50,14 +51,17 @@ class MainWindow : public QMainWindow
     bool linkState = false;
 
     void updatePointsList();
-    void updateAlarmList(const QStringList &list);
+
 
     int ip1,ip2,ip3,ip4;
+
+    SQLManager *manager;
 
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    void updateAlarmList(const QStringList &list);
 
 private slots:
     void on_pushButtonStartStop_clicked();
@@ -69,6 +73,7 @@ private slots:
     void checkAudio();
     void startRecord(uint8_t gr, uint8_t point);
     void stopRecord();
+    void sqlError(const QString &message);
 
 void radioButton_toggled(bool checked);
 

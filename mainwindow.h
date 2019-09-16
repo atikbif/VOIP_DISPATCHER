@@ -35,6 +35,9 @@ class MainWindow : public QMainWindow
     QAudioRecorder *dispRecorder;
     QAudioEncoderSettings audioSettings;
 
+    QDate fromDate;
+    QDate toDate;
+
     QAudioDeviceInfo getInpDevice(const QString &name);
     QAudioDeviceInfo getOutDevice(const QString &name);
     void setTimerInterval(int value);
@@ -84,6 +87,14 @@ void on_pushButtonCloseTree_clicked();
 void on_pushButtonOpenTree_clicked();
 
 void on_pushButtonCheckAudio_clicked();
+
+void on_pushButtonJournal_clicked();
+
+void on_pushButtonEndTime_clicked();
+
+void on_pushButtonStartTime_clicked();
+
+void on_tabWidgetArchive_currentChanged(int index);
 
 private:
     Ui::MainWindow *ui;

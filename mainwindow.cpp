@@ -6,6 +6,9 @@
 #include "dialogconfig.h"
 #include <QProcess>
 #include <QMessageBox>
+#include "dialogdate.h"
+#include <QSqlQuery>
+#include <QSqlQueryModel>
 
 
 QAudioDeviceInfo MainWindow::getInpDevice(const QString &name)
@@ -176,7 +179,14 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
   QTextCodec::setCodecForLocale(utfcodec);
   ui->setupUi(this);
 
+  fromDate = QDate::currentDate();
+  toDate = QDate::currentDate();
+  ui->lineEditFrom->setText(fromDate.toString("dd-MM-yyyy"));
+  ui->lineEditTo->setText(toDate.toString("dd-MM-yyyy"));
+
   qRegisterMetaType<uint8_t>("uint8_t");
+
+
 
   speakerTimer = nullptr;
   dispRecorder = nullptr;
@@ -186,11 +196,10 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
   connect(manager,&SQLManager::error,this,&MainWindow::sqlError);
   connect(manager,&SQLManager::updateAlarmList,this,&MainWindow::updateAlarmList);
   manager->initDB();
-  manager->insertMessage("Запуск приложения","info");
+  manager->insertMessage("Запуск приложения","сообщение");
 
     updatePointsList();
     QApplication::setStyle(new NorwegianWoodStyle);
-
 
     QStringList inpDevices;
     const QAudioDeviceInfo &defaultInpDeviceInfo = QAudioDeviceInfo::defaultInputDevice();
@@ -289,7 +298,7 @@ void MainWindow::on_pushButtonStartStop_clicked()
 
 
     if (buttonCmd == START) {
-        manager->insertMessage("Запуск опроса","info");
+        manager->insertMessage("Запуск опроса","сообщение");
         m_audioInputDevice.reset(new AudioInputDevice(format,udpScanner));
         connect(m_audioInputDevice.data(),&AudioInputDevice::newLevel,this,&MainWindow::newLevel);
         m_qaudioInput.reset(new QAudioInput(inpDeviceInfo, format));
@@ -319,11 +328,11 @@ void MainWindow::on_pushButtonStartStop_clicked()
         manager->setIP(ip);
         udpScanner->start();
         linkState = false;
-        QTimer::singleShot(1000, this, [this](){if(linkState==false) {ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :red; }");manager->insertMessage("нет связи","alarm");}});
+        QTimer::singleShot(1000, this, [this](){if(linkState==false) {ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :red; }");manager->insertMessage("нет связи","авария");}});
 
 
     }else {
-        manager->insertMessage("Остановка опроса","info");
+        manager->insertMessage("Остановка опроса","сообщение");
         m_qaudioInput->suspend();
         m_audioInputDevice->stop();
         //m_qaudioOutput->suspend();
@@ -365,11 +374,11 @@ void MainWindow::linkStatechanged(bool value)
 {
     //qDebug() << value;
   if(value) {
-      manager->insertMessage("Связь установлена","info");
+      manager->insertMessage("Связь установлена","сообщение");
     linkState = true;
     ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :green; }");
   }else {
-    manager->insertMessage("Нет связи","alarm");
+    manager->insertMessage("Нет связи","авария");
     linkState = false;
     updateAlarmList(QStringList());
     ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :red; }");
@@ -604,12 +613,12 @@ void MainWindow::on_checkBox_clicked()
     if(ui->checkBox->isChecked()) {
         ui->checkBox->setToolTip("режим прослушивания");
         ui->checkBox->setText("РЕЖИМ ПРОСЛУШИВАНИЯ");
-        manager->insertMessage("РЕЖИМ ПРОСЛУШИВАНИЯ","info");
+        manager->insertMessage("РЕЖИМ ПРОСЛУШИВАНИЯ","сообщение");
     }
     else {
         ui->checkBox->setToolTip("режим передачи голоса");
         ui->checkBox->setText("РЕЖИМ ВЕЩАНИЯ");
-        manager->insertMessage("РЕЖИМ ВЕЩАНИЯ","info");
+        manager->insertMessage("РЕЖИМ ВЕЩАНИЯ","сообщение");
     }
     if(dispRecorder) {
         dispRecorder->stop();
@@ -651,7 +660,7 @@ void MainWindow::on_checkBox_clicked()
             dispRecorder->setAudioInput(ui->comboBoxInput->currentText());
             dispRecorder->setEncodingSettings(audioSettings);
             dispRecorder->setContainerFormat("wav");
-            fName = QCoreApplication::applicationDirPath() + "/audio/disp";
+            fName = QCoreApplication::applicationDirPath() + "/audio_records/disp";
             fName+= QDateTime::currentDateTime().toString("_dd_MM_yyyy_hh_mm_ss") + ".wav";
             while(QFile::exists(fName)) {fName.remove(".wav");fName+="_again.wav";}
             QUrl url = QUrl::fromLocalFile(fName);
@@ -681,4 +690,58 @@ void MainWindow::on_pushButtonOpenTree_clicked()
 void MainWindow::on_pushButtonCheckAudio_clicked()
 {
     udpScanner->checkAudio();
+}
+
+void MainWindow::on_pushButtonJournal_clicked()
+{
+    int num = ui->tabWidgetArchive->currentIndex();
+    if(num==0) {
+        manager->updateJournal(fromDate,toDate,ui->tableViewJournal);
+        ui->tableViewJournal->show();
+    }else if(num==1) {
+        manager->updatePointArchive(fromDate,toDate,ui->tableViewPoints,ui->spinBoxGroup->value(),ui->spinBoxPoint->value());
+        ui->tableViewPoints->show();
+    }else if(num==3) {
+        manager->updateGroupArchive(fromDate,toDate,ui->tableViewGroups,ui->spinBoxGroup->value());
+        ui->tableViewGroups->show();
+    }else if(num==2) {
+        manager->updatePointAlarmArchive(fromDate,toDate,ui->tableViewPointAlarm,ui->spinBoxGroup->value(),ui->spinBoxPoint->value());
+        ui->tableViewPointAlarm->show();
+    }else if(num==4) {
+        manager->updateGroupAlarmArchive(fromDate,toDate,ui->tableViewGroupAlarm,ui->spinBoxGroup->value());
+        ui->tableViewGroupAlarm->show();
+    }
+
+}
+
+void MainWindow::on_pushButtonEndTime_clicked()
+{
+    DialogDate *dialog = new DialogDate(this);
+    dialog->setDate(toDate);
+    connect(dialog,&DialogDate::finished,dialog,&DialogDate::deleteLater);
+    connect(dialog,&DialogDate::accepted,[this,dialog](){toDate = dialog->getDate();ui->lineEditTo->setText(toDate.toString("dd-MM-yyyy"));});
+    dialog->show();
+}
+
+void MainWindow::on_pushButtonStartTime_clicked()
+{
+    DialogDate *dialog = new DialogDate(this);
+    dialog->setDate(fromDate);
+    connect(dialog,&DialogDate::finished,dialog,&DialogDate::deleteLater);
+    connect(dialog,&DialogDate::accepted,[this,dialog](){fromDate = dialog->getDate();ui->lineEditFrom->setText(fromDate.toString("dd-MM-yyyy"));});
+    dialog->show();
+}
+
+void MainWindow::on_tabWidgetArchive_currentChanged(int index)
+{
+    if(index==0) {
+        ui->spinBoxGroup->setVisible(false);
+        ui->spinBoxPoint->setVisible(false);
+    }else if(index==3 || index==4){
+        ui->spinBoxGroup->setVisible(true);
+        ui->spinBoxPoint->setVisible(false);
+    }else {
+        ui->spinBoxGroup->setVisible(true);
+        ui->spinBoxPoint->setVisible(true);
+    }
 }

@@ -8,6 +8,7 @@
 
 void SQLDriver::initDataBase()
 {
+    qRegisterMetaType<Qt::Orientation>("Qt::Orientation");
     //db.setDatabaseName("Driver={MySQL ODBC 8.0 Unicode Driver};Database=voip;");
     db.setDatabaseName("Driver={PostgreSQL Unicode};Database=voip;");
     db.setHostName("localhost");
@@ -69,6 +70,16 @@ void SQLDriver::initDataBase()
                    "tmr TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL"
                    ");");
     }
+    /*journalModel = new QSqlQueryModel(nullptr);
+    pointModel = new QSqlQueryModel(nullptr);
+    groupModel = new QSqlQueryModel(nullptr);
+    groupAlarmModel = new QSqlQueryModel(nullptr);
+    pointAlarmModel = new QSqlQueryModel(nullptr);*/
+    journalModel = new ColoredSqlQueryModel(nullptr);
+    pointModel = new ColoredSqlQueryModel(nullptr);
+    groupModel = new ColoredSqlQueryModel(nullptr);
+    groupAlarmModel = new ColoredSqlQueryModel(nullptr);
+    pointAlarmModel = new ColoredSqlQueryModel(nullptr);
 }
 
 void SQLDriver::insertDatatoDataBase()
@@ -455,6 +466,77 @@ void SQLDriver::insertMessage(const QString &text, const QString &type)
     messages.push_back(message);
 }
 
+void SQLDriver::updateJournal(const QDate &from, const QDate &to, QTableView *tv)
+{
+    QMutexLocker locker(&mutex);
+
+    journalQuery = "SELECT tmr,type,message FROM journal "
+            "where tmr between '";
+    journalQuery += from.toString(" yyyy-MM-dd 00:00:00");
+    journalQuery += "' and '";
+    journalQuery += to.toString(" yyyy-MM-dd 23:59:59");
+    journalQuery += "' ORDER BY id DESC;";
+    tv->setModel(journalModel);
+}
+
+void SQLDriver::updatePointArchive(const QDate &from, const QDate &to, QTableView *tv, int gr, int point)
+{
+    QMutexLocker locker(&mutex);
+
+    pointQuery = "SELECT tmr,di1,di2,do1,do2,pow,bat,speaker,ip FROM points "
+            "where tmr between '";
+    pointQuery += from.toString("yyyy-MM-dd 00:00:00");
+    pointQuery += "' and '";
+    pointQuery += to.toString("yyyy-MM-dd 23:59:59");
+    pointQuery += "' and gate="+QString::number(gr);
+    pointQuery += " and num="+QString::number(point);
+    pointQuery += " ORDER BY id DESC;";
+    tv->setModel(pointModel);
+}
+
+void SQLDriver::updateGroupArchive(const QDate &from, const QDate &to, QTableView *tv, int gr)
+{
+    QMutexLocker locker(&mutex);
+
+    groupQuery = "SELECT tmr,cnt,di1,di2,di3,do1,do2,ip FROM gates "
+            "where tmr between '";
+    groupQuery += from.toString("yyyy-MM-dd 00:00:00");
+    groupQuery += "' and '";
+    groupQuery += to.toString("yyyy-MM-dd 23:59:59");
+    groupQuery += "' and num="+QString::number(gr);
+    groupQuery += " ORDER BY id DESC;";
+    tv->setModel(groupModel);
+}
+
+void SQLDriver::updatePointAlarmArchive(const QDate &from, const QDate &to, QTableView *tv, int gr, int point)
+{
+    QMutexLocker locker(&mutex);
+
+    pointAlarmQuery = "SELECT tmr,ip,type,alarm FROM point_alarms "
+            "where tmr between '";
+    pointAlarmQuery += from.toString("yyyy-MM-dd 00:00:00");
+    pointAlarmQuery += "' and '";
+    pointAlarmQuery += to.toString("yyyy-MM-dd 23:59:59");
+    pointAlarmQuery += "' and gate="+QString::number(gr);
+    pointAlarmQuery += " and point="+QString::number(point);
+    pointAlarmQuery += " ORDER BY id DESC;";
+    tv->setModel(pointAlarmModel);
+}
+
+void SQLDriver::updateGroupAlarmArchive(const QDate &from, const QDate &to, QTableView *tv, int gr)
+{
+    QMutexLocker locker(&mutex);
+
+    groupAlarmQuery = "SELECT tmr,ip,type,alarm FROM gate_alarms "
+            "where tmr between '";
+    groupAlarmQuery += from.toString("yyyy-MM-dd 00:00:00");
+    groupAlarmQuery += "' and '";
+    groupAlarmQuery += to.toString("yyyy-MM-dd 23:59:59");
+    groupAlarmQuery += "' and gate="+QString::number(gr);
+    groupAlarmQuery += " ORDER BY id DESC;";
+    tv->setModel(groupAlarmModel);
+}
+
 void SQLDriver::addMessageToJournal()
 {
     mutex.lock();
@@ -523,6 +605,61 @@ void SQLDriver::work()
             insertDatatoDataBase();
         }
         addMessageToJournal();
+        mutex.lock();
+        if(!journalQuery.isEmpty()) {
+            QSqlQuery query(journalQuery);
+            journalModel->setQuery(query);
+            journalModel->setHeaderData(0, Qt::Horizontal, tr("Время"));
+            journalModel->setHeaderData(1, Qt::Horizontal, tr("Тип"));
+            journalModel->setHeaderData(2, Qt::Horizontal, tr("Сообщение"));
+            journalQuery="";
+        }
+        if(!pointQuery.isEmpty()) {
+            QSqlQuery query(pointQuery);
+            pointModel->setQuery(query);
+            pointModel->setHeaderData(0, Qt::Horizontal, tr("Время"));
+            pointModel->setHeaderData(1, Qt::Horizontal, tr("Вход 1"));
+            pointModel->setHeaderData(2, Qt::Horizontal, tr("Вход 2"));
+            pointModel->setHeaderData(3, Qt::Horizontal, tr("Выход 1"));
+            pointModel->setHeaderData(4, Qt::Horizontal, tr("Выход 2"));
+            pointModel->setHeaderData(5, Qt::Horizontal, tr("Питание"));
+            pointModel->setHeaderData(6, Qt::Horizontal, tr("Аккумулятор"));
+            pointModel->setHeaderData(7, Qt::Horizontal, tr("Динамики"));
+            pointModel->setHeaderData(8, Qt::Horizontal, tr("IP"));
+            pointQuery="";
+        }
+        if(!groupQuery.isEmpty()) {
+            QSqlQuery query(groupQuery);
+            groupModel->setQuery(query);
+            groupModel->setHeaderData(0, Qt::Horizontal, tr("Время"));
+            groupModel->setHeaderData(1, Qt::Horizontal, tr("Подкл. точки"));
+            groupModel->setHeaderData(2, Qt::Horizontal, tr("Вход 1"));
+            groupModel->setHeaderData(3, Qt::Horizontal, tr("Вход 2"));
+            groupModel->setHeaderData(4, Qt::Horizontal, tr("Вход 3"));
+            groupModel->setHeaderData(5, Qt::Horizontal, tr("Выход 1"));
+            groupModel->setHeaderData(6, Qt::Horizontal, tr("Выход 2"));
+            groupModel->setHeaderData(7, Qt::Horizontal, tr("IP"));
+            groupQuery="";
+        }
+        if(!groupAlarmQuery.isEmpty()) {
+            QSqlQuery query(groupAlarmQuery);
+            groupAlarmModel->setQuery(query);
+            groupAlarmModel->setHeaderData(0, Qt::Horizontal, tr("Время"));
+            groupModel->setHeaderData(1, Qt::Horizontal, tr("IP"));
+            groupAlarmModel->setHeaderData(2, Qt::Horizontal, tr("Тип"));
+            groupAlarmModel->setHeaderData(3, Qt::Horizontal, tr("Сообщение"));
+            groupAlarmQuery="";
+        }
+        if(!pointAlarmQuery.isEmpty()) {
+            QSqlQuery query(pointAlarmQuery);
+            pointAlarmModel->setQuery(query);
+            pointAlarmModel->setHeaderData(0, Qt::Horizontal, tr("Время"));
+            pointAlarmModel->setHeaderData(1, Qt::Horizontal, tr("IP"));
+            pointAlarmModel->setHeaderData(2, Qt::Horizontal, tr("Тип"));
+            pointAlarmModel->setHeaderData(3, Qt::Horizontal, tr("Сообщение"));
+            pointAlarmQuery="";
+        }
+        mutex.unlock();
     }
 }
 

@@ -52,6 +52,8 @@ INCLUDEPATH += ../VOIP_DISPATCHER/opus-1.3/win32/
 
 
 SOURCES += \
+    coloredsqlquerymodel.cpp \
+    dialogdate.cpp \
         main.cpp \
         mainwindow.cpp \
 #        speex-1.2.0/libspeex/bits.c \
@@ -275,6 +277,8 @@ SOURCES += \
     opus-1.3/src/repacketizer.c
 
 HEADERS += \
+    coloredsqlquerymodel.h \
+    dialogdate.h \
         mainwindow.h \
     audioinputdevice.h \
     checksum.h \
@@ -371,6 +375,7 @@ HEADERS += \
     wav_example.h
 
 FORMS += \
+    dialogdate.ui \
         mainwindow.ui \
     dialogconfig.ui
 

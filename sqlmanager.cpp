@@ -43,3 +43,28 @@ void SQLManager::setPointCnt(quint8 value)
 {
     driver->setPointCnt(value);
 }
+
+void SQLManager::updateJournal(const QDate &from, const QDate &to, QTableView *tv)
+{
+    driver->updateJournal(from,to,tv);
+}
+
+void SQLManager::updatePointArchive(const QDate &from, const QDate &to, QTableView *tv, int gr, int point)
+{
+    driver->updatePointArchive(from,to,tv,gr,point);
+}
+
+void SQLManager::updateGroupArchive(const QDate &from, const QDate &to, QTableView *tv, int gr)
+{
+    driver->updateGroupArchive(from,to,tv,gr);
+}
+
+void SQLManager::updatePointAlarmArchive(const QDate &from, const QDate &to, QTableView *tv, int gr, int point)
+{
+    driver->updatePointAlarmArchive(from,to,tv,gr,point);
+}
+
+void SQLManager::updateGroupAlarmArchive(const QDate &from, const QDate &to, QTableView *tv, int gr)
+{
+    driver->updateGroupAlarmArchive(from,to,tv,gr);
+}

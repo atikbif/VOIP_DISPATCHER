@@ -63,7 +63,7 @@ qint64 AudioOutputDevice::readData(char *data, qint64 maxlen)
     emit newOutLevel(plot);
     if(recordOn==false && startRecord) {
         startRecord = false;
-        QString fName = QCoreApplication::applicationDirPath() + "/audio/gr"+QString::number(gr_num);
+        QString fName = QCoreApplication::applicationDirPath() + "/audio_records/gr"+QString::number(gr_num);
         fName+="_point"+QString::number(p_num);
         fName+= QDateTime::currentDateTime().toString("_dd_MM_yyyy_hh_mm_ss") + ".pcm";
         while(QFile::exists(fName)) {fName.remove(".pcm");fName+="_again.pcm";}

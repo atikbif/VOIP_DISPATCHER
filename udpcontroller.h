@@ -27,6 +27,7 @@ signals:
     void linkStateChanged(bool value);
     void updateAudio(QByteArray data);
     void fromIDSignal(unsigned char value);
+    void updateGroupState(const QByteArray &data);
     void updateState(const QByteArray &data);
     void startRecord(uint8_t gr, uint8_t point);
     void stopRecord();

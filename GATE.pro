@@ -52,8 +52,10 @@ INCLUDEPATH += ../VOIP_DISPATCHER/opus-1.3/win32/
 
 
 SOURCES += \
+    audiotree.cpp \
     coloredsqlquerymodel.cpp \
     dialogdate.cpp \
+    group.cpp \
         main.cpp \
         mainwindow.cpp \
 #        speex-1.2.0/libspeex/bits.c \
@@ -91,6 +93,7 @@ SOURCES += \
 #        speex-1.2.0/libspeex/window.c \
     audioinputdevice.cpp \
     checksum.cpp \
+    point.cpp \
     sqldriver.cpp \
     sqlmanager.cpp \
     udpworker.cpp \
@@ -258,7 +261,7 @@ SOURCES += \
     opus-1.3/silk/float/warped_autocorrelation_FLP.c \
     opus-1.3/silk/float/wrappers_FLP.c \
     opus-1.3/silk/x86/NSQ_del_dec_sse4_1.c \
-    opus-1.3/silk/x86/NSQ_sse4_1.c \
+   opus-1.3/silk/x86/NSQ_sse4_1.c \
     opus-1.3/silk/x86/VAD_sse4_1.c \
     opus-1.3/silk/x86/VQ_WMat_EC_sse4_1.c \
     opus-1.3/silk/x86/x86_silk_map.c \
@@ -277,11 +280,14 @@ SOURCES += \
     opus-1.3/src/repacketizer.c
 
 HEADERS += \
+    audiotree.h \
     coloredsqlquerymodel.h \
     dialogdate.h \
+    group.h \
         mainwindow.h \
     audioinputdevice.h \
     checksum.h \
+    point.h \
     sqldriver.h \
     sqlmanager.h \
     udpworker.h \

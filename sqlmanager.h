@@ -15,9 +15,10 @@ public:
     ~SQLManager();
     void initDB();
     void insertData(const QByteArray &data);
+    void insertGroupData(const QByteArray &data);
     void insertMessage(const QString &text, const QString &type);
     void setIP(const QString &value);
-    void setPointCnt(quint8 value);
+    void setPointCnt(quint8 grNum, quint8 value);
     void updateJournal(const QDate &from, const QDate &to, QTableView *tv);
     void updatePointArchive(const QDate &from, const QDate &to, QTableView *tv, int gr, int point);
     void updateGroupArchive(const QDate &from, const QDate &to, QTableView *tv, int gr);

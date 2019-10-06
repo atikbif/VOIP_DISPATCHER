@@ -10,6 +10,7 @@
 #include <QTimer>
 #include <QAudioRecorder>
 #include "sqlmanager.h"
+#include "audiotree.h"
 
 namespace Ui {
 class MainWindow;
@@ -24,6 +25,7 @@ class MainWindow : public QMainWindow
     bool buttonCmd = START;
 
     QTimer *speakerTimer;
+    AudioTree *tree;
 
     QScopedPointer<AudioInputDevice> m_audioInputDevice;
     QScopedPointer<QAudioInput> m_qaudioInput;
@@ -57,8 +59,12 @@ class MainWindow : public QMainWindow
 
 
     int ip1,ip2,ip3,ip4;
+    QStringList alarmGroupList;
+    QStringList alarmPointList;
 
     SQLManager *manager;
+
+    QStringList readConf();
 
 
 public:
@@ -73,6 +79,7 @@ private slots:
     void linkStatechanged(bool value);
     void fromIDChanged(unsigned char value);
     void updateState(const QByteArray &state);
+    void updateGroupState(const QByteArray &state);
     void checkAudio();
     void startRecord(uint8_t gr, uint8_t point);
     void stopRecord();

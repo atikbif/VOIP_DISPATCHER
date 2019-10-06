@@ -29,6 +29,11 @@ void SQLManager::insertData(const QByteArray &data)
     driver->insertData(data);
 }
 
+void SQLManager::insertGroupData(const QByteArray &data)
+{
+    driver->insertGroupData(data);
+}
+
 void SQLManager::insertMessage(const QString &text, const QString &type)
 {
     driver->insertMessage(text,type);
@@ -39,9 +44,9 @@ void SQLManager::setIP(const QString &value)
     driver->setIP(value);
 }
 
-void SQLManager::setPointCnt(quint8 value)
+void SQLManager::setPointCnt(quint8 grNum, quint8 value)
 {
-    driver->setPointCnt(value);
+    driver->setPointCnt(grNum,value);
 }
 
 void SQLManager::updateJournal(const QDate &from, const QDate &to, QTableView *tv)

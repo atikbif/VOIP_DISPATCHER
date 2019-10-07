@@ -46,7 +46,7 @@ void MainWindow::updatePointsList()
 {
   QVBoxLayout *layout = dynamic_cast<QVBoxLayout *>(ui->scrollArea->widget()->layout());
   if (layout) {
-    int cur_id = 0;
+    /*int cur_id = 0;
     QLayoutItem *item;
     while ((item = layout->takeAt(0)) != nullptr) {
       QRadioButton *rb = dynamic_cast<QRadioButton*>(item->widget());
@@ -60,11 +60,12 @@ void MainWindow::updatePointsList()
     rb->setChecked(true);
     connect(rb, &QRadioButton::toggled, this, &MainWindow::radioButton_toggled);
     rb->setProperty("id", 0xFF);
-    layout->addWidget(rb);
+    layout->addWidget(rb);*/
 
     ui->treeWidget->clear();
     tree = new AudioTree(ui->treeWidget);
     tree->createTree();
+
     layout->addStretch(1);
   }
   ui->treeWidget->expandAll();
@@ -77,6 +78,13 @@ void MainWindow::updatePointsList()
   ip4 = conf.at(3).toInt();
   int audio_tmr = conf.at(4).toInt();
   setTimerInterval(60*audio_tmr);
+  int grCnt = conf.at(5).toInt();
+  for(int i=0;i<grCnt;i++) {
+      auto grName = tree->getGroupValue(i,"name");
+      if(grName) {
+          ui->comboBoxGroups->addItem(std::any_cast<QString>(grName.value()));
+      }
+  }
 }
 
 QStringList MainWindow::readConf()
@@ -210,6 +218,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
     ip += QString::number(static_cast<quint8>(ip4));
     manager->setIP(ip);
     udpScanner = new UDPController(ip);
+    udpScanner->setToID(static_cast<quint8>(linkGroup),static_cast<quint8>(linkPoint));
 
 
     for(int i = 0; i < 1000; i++)
@@ -255,6 +264,8 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
     font.setPointSize (12);
     font.setFixedPitch (true);
     ui->listWidgetAlarm->setFont(font);
+
+    on_radioButtonAllPoints_clicked();
     //timer->start();
 
     //showMaximized();
@@ -390,175 +401,7 @@ void MainWindow::updateState(const QByteArray &state)
     QStringList pointAlarms;
     QList<QTreeWidgetItem *> items = ui->treeWidget->findItems(
                 QString("*"), Qt::MatchWrap | Qt::MatchWildcard | Qt::MatchRecursive);
-    bool gate_alarm = false;
-    /*QTreeWidgetItem *gateItem = nullptr;
-    for(QTreeWidgetItem *item:items) {
-        if(item->whatsThis(1)=="pcnt") {
-            int cnt = static_cast<quint8>(static_cast<quint8>(state.at(0)))<<8 | static_cast<quint8>(state.at(1));
-            item->setText(1,QString::number(cnt));
-            item->setBackground(0, QColor(255,255,255,0));
-            if(cnt<point_cnt) {
-                gate_alarm = true;
-                gateItem = item->parent();
-                item->setBackground(0, QColor(255,0,0,150));
-                item->setText(1,QString::number(cnt) + "  (ожидается "+QString::number(point_cnt)+")");
-                alarmList.append(gateItem->text(0)+":");
-                alarmList.append("АВАРИЯ: Число подключенных точек - " + QString::number(cnt));
-                alarmList.append("ожидается " + QString::number(point_cnt));
-                alarmList.append("");
-            }
-        }else if(item->whatsThis(1)=="gate_di1") {
-            QString res = "выкл";
-            uint16_t byte_num_state = 232;
-            uint16_t byte_num_break = 232 + (1)/8;
-            uint16_t byte_num_short = 232 + (2)/8;
-            uint8_t bit_num_state = 0;
-            uint8_t bit_num_break = (1)%8;
-            uint8_t bit_num_short = (2)%8;
-            if(state.at(byte_num_state)&(1<<bit_num_state)) res = "вкл";
-            else if(state.at(byte_num_break)&(1<<bit_num_break)) res = "обрыв";
-            else if(state.at(byte_num_short)&(1<<bit_num_short)) res = "замыкание";
-            item->setText(1,res);
-        }else if(item->whatsThis(1)=="gate_di2") {
-            QString res = "выкл";
-            uint16_t byte_num_state = 232 + (3)/8;
-            uint16_t byte_num_break = 232 + (4)/8;
-            uint16_t byte_num_short = 232 + (5)/8;
-            uint8_t bit_num_state = (3)%8;
-            uint8_t bit_num_break = (4)%8;
-            uint8_t bit_num_short = (5)%8;
-            if(state.at(byte_num_state)&(1<<bit_num_state)) res = "вкл";
-            else if(state.at(byte_num_break)&(1<<bit_num_break)) res = "обрыв";
-            else if(state.at(byte_num_short)&(1<<bit_num_short)) res = "замыкание";
-            item->setText(1,res);
-        }else if(item->whatsThis(1)=="gate_di3") {
-            QString res = "выкл";
-            uint16_t byte_num_state = 232 + (6)/8;
-            uint16_t byte_num_break = 232 + (7)/8;
-            uint16_t byte_num_short = 232 + (8)/8;
-            uint8_t bit_num_state = (6)%8;
-            uint8_t bit_num_break = (7)%8;
-            uint8_t bit_num_short = (8)%8;
-            if(state.at(byte_num_state)&(1<<bit_num_state)) res = "вкл";
-            else if(state.at(byte_num_break)&(1<<bit_num_break)) res = "обрыв";
-            else if(state.at(byte_num_short)&(1<<bit_num_short)) res = "замыкание";
-            item->setText(1,res);
-        }else if(item->whatsThis(1)=="gate_do1") {
-            uint16_t byte_num = 232+(9)/8;
-            uint16_t bit_num = (9)%8;
-            if(state.at(byte_num)&(1<<bit_num)) item->setText(1,"вкл");
-            else item->setText(1,"выкл");
-        }else if(item->whatsThis(1)=="gate_do2") {
-            uint16_t byte_num = 232+(10)/8;
-            uint16_t bit_num = (10)%8;
-            if(state.at(byte_num)&(1<<bit_num)) item->setText(1,"вкл");
-            else item->setText(1,"выкл");
-        }
-    }*/
     manager->insertData(state);
-    /*for(int i=0;i<100;i++) {
-        pointAlarms.clear();
-        bool point_alarm = false;
-        QTreeWidgetItem *pointItem = nullptr;
-        QString link_audio = "p_"+QString::number(i+1)+"_audio";
-        QString link_pow = "p_"+QString::number(i+1)+"_power";
-        QString link_acc = "p_"+QString::number(i+1)+"_acc";
-        QString link_di1 = "p_"+QString::number(i+1)+"_di1";
-        QString link_di2 = "p_"+QString::number(i+1)+"_di2";
-        QString link_do1 = "p_"+QString::number(i+1)+"_do1";
-        QString link_do2 = "p_"+QString::number(i+1)+"_do2";
-        for(QTreeWidgetItem *item:items) {
-            if(item->whatsThis(1)==link_pow) {
-                QString pow = QString::number(static_cast<double>(static_cast<quint8>(state.at(32+i*2+1)))/10);
-
-                item->setText(1,pow + " В");
-            }else if(item->whatsThis(1)==link_acc) {
-                item->setText(1,QString::number(static_cast<quint8>(static_cast<quint8>(state.at(32+i*2)))/10)+" В");
-            }else if(item->whatsThis(1)==link_di1) {
-                bool alarm = false;
-                QString res = "выкл";
-                uint16_t byte_num_state = static_cast<uint16_t>(232 + (16+i*10+1)/8);
-                uint16_t byte_num_break = static_cast<uint16_t>(232 + (16+i*10+2)/8);
-                uint16_t byte_num_short = static_cast<uint16_t>(232 + (16+i*10+3)/8);
-                uint8_t bit_num_state = (16+i*10+1)%8;
-                uint8_t bit_num_break = (16+i*10+2)%8;
-                uint8_t bit_num_short = (16+i*10+3)%8;
-                if(state.at(byte_num_state)&(1<<bit_num_state)) res = "вкл";
-                else if(state.at(byte_num_break)&(1<<bit_num_break)) {res = "обрыв";alarm=true;pointAlarms.append("АВАРИЯ ВХОД1(КТВ) - ОБРЫВ");}
-                else if(state.at(byte_num_short)&(1<<bit_num_short)) {res = "замыкание";alarm=true;pointAlarms.append("АВАРИЯ ВХОД1(КТВ) - ЗАМЫКАНИЕ");}
-                else {alarm=true;pointAlarms.append("АВАРИЯ ВХОД1(КТВ) - ВЫКЛ");}
-                pointItem = item->parent();
-                item->setBackground(0, QColor(255,255,255,0));
-                if(alarm) {
-                    point_alarm = true;
-                    item->setBackground(0, QColor(255,0,0,150));
-                }
-                item->setText(1,res);
-            }else if(item->whatsThis(1)==link_di2) {
-                QString res = "выкл";
-                uint16_t byte_num_state = static_cast<uint16_t>(232 + (16+i*10+4)/8);
-                uint16_t byte_num_break = static_cast<uint16_t>(232 + (16+i*10+5)/8);
-                uint16_t byte_num_short = static_cast<uint16_t>(232 + (16+i*10+6)/8);
-                uint8_t bit_num_state = (16+i*10+4)%8;
-                uint8_t bit_num_break = (16+i*10+5)%8;
-                uint8_t bit_num_short = (16+i*10+6)%8;
-                if(state.at(byte_num_state)&(1<<bit_num_state)) res = "вкл";
-                else if(state.at(byte_num_break)&(1<<bit_num_break)) {res = "обрыв";}
-                else if(state.at(byte_num_short)&(1<<bit_num_short)) {res = "замыкание";}
-                item->setText(1,res);
-            }else if(item->whatsThis(1)==link_do1) {
-                QString res = "выкл";
-                uint16_t byte_num_state = static_cast<uint16_t>(232 + (16+i*10+7)/8);
-                uint8_t bit_num_state = (16+i*10+7)%8;
-                if(state.at(byte_num_state)&(1<<bit_num_state)) res = "вкл";
-                item->setText(1,res);
-            }else if(item->whatsThis(1)==link_do2) {
-                QString res = "выкл";
-                uint16_t byte_num_state = static_cast<uint16_t>(232 + (16+i*10+8)/8);
-                uint8_t bit_num_state = (16+i*10+8)%8;
-                if(state.at(byte_num_state)&(1<<bit_num_state)) res = "вкл";
-                item->setText(1,res);
-            }else if(item->whatsThis(1)==link_audio) {
-                bool alarm = true;
-                QString res = "не исправны";
-                uint16_t byte_num_state = static_cast<uint16_t>(232 + (16+i*10+0)/8);
-                uint8_t bit_num_state = (16+i*10+0)%8;
-                uint16_t byte_num_check = static_cast<uint16_t>(232 + (16+i*10+9)/8);
-                uint8_t bit_num_check = (16+i*10+9)%8;
-                if(state.at(byte_num_state)&(1<<bit_num_state)) {res = "исправны";alarm=false;}
-                if((state.at(byte_num_check)&(1<<bit_num_check))==0) {res = "не проверялись";alarm=false;}
-                item->setText(1,res);
-                item->setBackground(0, QColor(255,255,255,0));
-                if(alarm) {
-                    pointAlarms.append("АВАРИЯ НЕИСПРАВНОСТЬ ДИНАМИКОВ");
-                    point_alarm = true;
-                    item->setBackground(0, QColor(255,0,0,150));
-                }
-            }
-        }
-        if(pointItem) {
-            pointItem->setBackground(0, QColor(255,255,255,0));
-            gateItem = pointItem->parent();
-            if(point_alarm) {
-                alarmList.append(pointItem->text(0)+":");
-                alarmList.append(pointAlarms);
-                alarmList.append("");
-                gate_alarm = true;
-                pointItem->setBackground(0, QColor(255,0,0,150));
-            }
-        }
-
-    }*/
-    /*if(gateItem) {
-        gateItem->setBackground(0, QColor(255,255,255,0));
-        if(gate_alarm) {
-            gateItem->setBackground(0, QColor(255,0,0,150));
-        }
-    }*/
-
-
-
-    //tree->setPointValue(0,0,"di1",Input::ON);
 
     quint8 req_num = static_cast<quint8>(state.at(0));
     quint16 used_point_cnt = static_cast<quint16>((static_cast<quint16>(static_cast<quint8>(state.at(1)))<<8) | static_cast<quint8>(state.at(2)));
@@ -719,11 +562,23 @@ void MainWindow::checkAudio()
 void MainWindow::startRecord(uint8_t gr, uint8_t point)
 {
     m_audiOutputDevice->startRecordCmd(gr,point);
+    qDebug() << gr << point;
+    QString res;
+    if(gr && point) {
+        auto grName = tree->getGroupValue(gr-1,"name");
+        auto pointName = tree->getPointValue(gr-1,point-1,"name");
+        if(grName && pointName) {
+            res+= std::any_cast<QString>(grName.value()) + "   (" + std::any_cast<QString>(pointName.value())+")";
+            ui->lineEditInputPoint->setText(res);
+        }
+    }
+
 }
 
 void MainWindow::stopRecord()
 {
     m_audiOutputDevice->stopRecordCmd();
+    ui->lineEditInputPoint->setText("");
 }
 
 void MainWindow::sqlError(const QString &message)
@@ -733,13 +588,13 @@ void MainWindow::sqlError(const QString &message)
 
 void MainWindow::radioButton_toggled(bool checked)
 {
-    if(checked) {
+    /*if(checked) {
         QRadioButton *rb = dynamic_cast<QRadioButton*>(sender());
         if(rb) {
             int id = rb->property("id").toInt();
             udpScanner->setToID(static_cast<quint8>(id));
         }
-    }
+    }*/
 }
 
 void MainWindow::on_checkBox_clicked()
@@ -882,5 +737,53 @@ void MainWindow::on_tabWidgetArchive_currentChanged(int index)
     }else {
         ui->spinBoxGroup->setVisible(true);
         ui->spinBoxPoint->setVisible(true);
+    }
+}
+
+void MainWindow::on_radioButtonPoint_clicked()
+{
+    ui->scrollArea->setEnabled(true);
+    ui->comboBoxGroups->setEnabled(true);
+    linkGroup &= ~(1<<7);
+    linkPoint &= ~(1<<7);
+    udpScanner->setToID(static_cast<quint8>(linkGroup),static_cast<quint8>(linkPoint));
+}
+
+void MainWindow::on_radioButtonAllPoints_clicked()
+{
+    ui->scrollArea->setEnabled(false);
+    ui->comboBoxGroups->setEnabled(false);
+    linkGroup |= (1<<7);
+    linkPoint |= (1<<7);
+    udpScanner->setToID(linkGroup,linkPoint);
+}
+
+void MainWindow::on_comboBoxGroups_currentIndexChanged(int index)
+{
+    QVBoxLayout *layout = dynamic_cast<QVBoxLayout *>(ui->scrollArea->widget()->layout());
+    if (layout) {
+        QLayoutItem *item;
+        while ((item = layout->takeAt(0)) != nullptr) {
+          delete item->widget();
+          delete item;
+        }
+        QStringList conf = readConf();
+        if(index>=0 && conf.size()>6+index) {
+            int pointCnt = conf.at(6+index).toInt();
+            for(int i=0;i<pointCnt;i++) {
+                auto pointName = tree->getPointValue(ui->comboBoxGroups->currentIndex(),i,"name");
+                if(pointName) {
+                    QRadioButton *rb = new QRadioButton(std::any_cast<QString>(pointName.value()));
+                    connect(rb, &QRadioButton::toggled, [=](){
+                        linkGroup = ui->comboBoxGroups->currentIndex()+1;linkPoint = i+1;
+                        qDebug() << linkGroup << linkPoint;
+                        if(udpScanner) udpScanner->setToID(static_cast<quint8>(linkGroup),static_cast<quint8>(linkPoint));
+                    });
+                    layout->addWidget(rb);
+                    if(i==0) rb->setChecked(true);
+                }
+            }
+            layout->addStretch();
+        }
     }
 }

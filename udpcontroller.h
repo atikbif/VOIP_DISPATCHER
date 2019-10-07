@@ -17,7 +17,7 @@ public:
     void start();
     void stop();
     void writeAudioPacket(const QByteArray &input);
-    void setToID(unsigned char id);
+    void setToID(unsigned char group, unsigned char point);
     void setSilentMode(bool value) {worker->setSilentMode(value);}
     void checkAudio();
     void setIP(const QString &ip) {worker->setIP(ip);}

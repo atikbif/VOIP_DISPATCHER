@@ -39,9 +39,9 @@ void UDPController::writeAudioPacket(const QByteArray &input)
   worker->writeAudioPacket(input);
 }
 
-void UDPController::setToID(unsigned char id)
+void UDPController::setToID(unsigned char group, unsigned char point)
 {
-    worker->setToID(id);
+    worker->setToID(group, point);
 }
 
 void UDPController::checkAudio()

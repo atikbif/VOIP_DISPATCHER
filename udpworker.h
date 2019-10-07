@@ -27,8 +27,14 @@ class UDPWorker : public QObject
     mutable QMutex mutex;
     static quint16 id;
     static const int wait_time_ms = 30;
-    quint8 toID = 0xFF;
+    //quint8 toID = 0xFF;
     quint8 fromID = 0x00;
+
+    quint8 fromGroup;
+    quint8 fromPoint;
+
+    quint8 grId = 0;
+    quint8 pointId = 0;
 
     bool startFlag = false;
     qint64 startTime;
@@ -52,7 +58,7 @@ public:
     void finish();
     void writeAudioPacket(const QByteArray &input);
     bool getLinkState() const;
-    void setToID(unsigned char id) {toID = id;}
+    void setToID(unsigned char group, unsigned char point) {/*toID = id;*/grId=group;pointId=point;}
     void setSilentMode(bool value) {silent=value;}
     void setIP(const QString &value) {ip=value;qDebug()<<ip;}
     void checkAudio();

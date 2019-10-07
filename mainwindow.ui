@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1184</width>
-    <height>783</height>
+    <width>1356</width>
+    <height>888</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,8 +20,8 @@
    <string>Диспетчер</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QVBoxLayout" name="verticalLayout">
-    <item>
+   <layout class="QGridLayout" name="gridLayout_13">
+    <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
        <number>0</number>
@@ -30,13 +30,13 @@
        <attribute name="title">
         <string>ЗВУК</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_3">
+       <layout class="QGridLayout" name="gridLayout_11">
         <item row="0" column="0">
          <widget class="QGroupBox" name="groupBox">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-            <horstretch>3</horstretch>
-            <verstretch>3</verstretch>
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
            </sizepolicy>
           </property>
           <property name="title">
@@ -60,38 +60,141 @@
          </widget>
         </item>
         <item row="0" column="1" rowspan="2">
-         <widget class="QScrollArea" name="scrollArea">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-            <horstretch>1</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="widgetResizable">
-           <bool>true</bool>
-          </property>
-          <widget class="QWidget" name="scrollAreaWidgetContents">
-           <property name="geometry">
-            <rect>
-             <x>0</x>
-             <y>0</y>
-             <width>282</width>
-             <height>314</height>
-            </rect>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_2"/>
-          </widget>
-         </widget>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QGroupBox" name="groupBox_3">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_3">
+             <item row="0" column="0">
+              <layout class="QHBoxLayout" name="horizontalLayout_4">
+               <item>
+                <widget class="QRadioButton" name="radioButtonAllPoints">
+                 <property name="text">
+                  <string>ШИРОКОВЕЩАТЕЛЬНЫЙ</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="radioButtonPoint">
+                 <property name="text">
+                  <string>ТОЧКА</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="0" column="1">
+              <spacer name="horizontalSpacer_5">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="groupBoxPoints">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>1</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_12">
+             <item row="0" column="0" colspan="2">
+              <layout class="QHBoxLayout" name="horizontalLayout_3">
+               <item>
+                <widget class="QLabel" name="label">
+                 <property name="text">
+                  <string>ГРУППА:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="comboBoxGroups"/>
+               </item>
+              </layout>
+             </item>
+             <item row="1" column="0" colspan="2">
+              <widget class="QScrollArea" name="scrollArea">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                 <horstretch>1</horstretch>
+                 <verstretch>1</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="widgetResizable">
+                <bool>true</bool>
+               </property>
+               <widget class="QWidget" name="scrollAreaWidgetContents">
+                <property name="geometry">
+                 <rect>
+                  <x>0</x>
+                  <y>0</y>
+                  <width>630</width>
+                  <height>268</height>
+                 </rect>
+                </property>
+                <layout class="QVBoxLayout" name="verticalLayout_2"/>
+               </widget>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_2">
+               <property name="text">
+                <string>Запись вход. вызова:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLineEdit" name="lineEditInputPoint">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QListWidget" name="listWidgetAlarm">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>0</horstretch>
+              <verstretch>1</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
-        <item row="2" column="1">
-         <widget class="QListWidget" name="listWidgetAlarm"/>
-        </item>
-        <item row="2" column="0">
+        <item row="1" column="0">
          <widget class="QGroupBox" name="groupBox_2">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-            <horstretch>3</horstretch>
-            <verstretch>3</verstretch>
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
            </sizepolicy>
           </property>
           <property name="title">
@@ -332,7 +435,7 @@
       </widget>
      </widget>
     </item>
-    <item>
+    <item row="1" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <widget class="QPushButton" name="pushButtonStartStop">

@@ -12,8 +12,14 @@ QByteArray UDPWorker::createRequestWriteAudio(const QByteArray &input, bool sile
     res.append(static_cast<char>(id>>8));
     res.append(static_cast<char>(id&0xFF));
     if(silentMode) res.append(0x02);else res.append(0x01); // cmd write audio
-    res.append(0x01);  // group number
-    res.append(toID);   // point number
+    if((grId&0x80) && (pointId&0x80)) {
+        res.append(0x01);
+        res.append(0xFF);
+    }else {
+        res.append(grId);  // group number
+        res.append(pointId);   // point number
+    }
+    //qDebug() << grId << pointId;
     res.append(input);
     int crc = CheckSum::getCRC16(res);
     res.append(static_cast<char>(crc & 0xFF));
@@ -215,7 +221,6 @@ void UDPWorker::scan()
     bool finishFlagstate = false;
     bool newAudioPacketFlagState = false;
     bool checkAudioFlagState = false;
-    int check_cnt = 0;
     static char receiveBuf[1024];
     static char decodeBuf[3000];
     static int decodeBufOffset = 0;
@@ -280,11 +285,16 @@ void UDPWorker::scan()
                       }
 
                       if(check_length) {
-                          if((quint8)receiveBuf[4]!=fromID  && ((quint8)receiveBuf[4]<100)) emit fromIDSignal((quint8)receiveBuf[4]);
-                          fromID = (quint8)receiveBuf[4];
-                          if(fromID>100) fromID = 0;
+                          //if((quint8)receiveBuf[4]!=fromID  && ((quint8)receiveBuf[4]<100)) emit fromIDSignal((quint8)receiveBuf[4]);
+                          //fromID = (quint8)receiveBuf[4];
+                          //if(fromID>100) fromID = 0;
+                          fromGroup = (quint8)receiveBuf[3];
+                          fromPoint = (quint8)receiveBuf[4];
+                          if(fromPoint>100) fromPoint = 0;
                           //qDebug() << fromID;
-                          if(fromID && (toID==0xFF || toID==fromID)) {
+                          if(((grId&0x80) && (pointId&0x80)) || ((grId==fromGroup) && (pointId==fromPoint))) {
+                              //qDebug() << grId << pointId << fromGroup << fromPoint;
+                          //if(fromID && (toID==0xFF || toID==fromID)) {
                               if(startFlag==false) {
                                   startFlag = true;
                                   emit startRecord((quint8)receiveBuf[3],(quint8)receiveBuf[4]);
@@ -328,7 +338,7 @@ void UDPWorker::scan()
         }
         if(finishFlagstate) break;
 
-        /**/
+
         QThread::msleep(1);
     }
 }

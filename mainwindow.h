@@ -62,6 +62,9 @@ class MainWindow : public QMainWindow
     QStringList alarmGroupList;
     QStringList alarmPointList;
 
+    int linkGroup;
+    int linkPoint;
+
     SQLManager *manager;
 
     QStringList readConf();
@@ -102,6 +105,12 @@ void on_pushButtonEndTime_clicked();
 void on_pushButtonStartTime_clicked();
 
 void on_tabWidgetArchive_currentChanged(int index);
+
+void on_radioButtonPoint_clicked();
+
+void on_radioButtonAllPoints_clicked();
+
+void on_comboBoxGroups_currentIndexChanged(int index);
 
 private:
     Ui::MainWindow *ui;

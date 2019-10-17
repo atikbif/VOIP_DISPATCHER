@@ -153,7 +153,7 @@
                   <x>0</x>
                   <y>0</y>
                   <width>630</width>
-                  <height>268</height>
+                  <height>257</height>
                  </rect>
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_2"/>
@@ -184,6 +184,16 @@
               <horstretch>0</horstretch>
               <verstretch>1</verstretch>
              </sizepolicy>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBoxAlarm">
+            <property name="text">
+             <string>Разрешить звуковое оповещение аварии</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -237,14 +247,14 @@
         <item row="1" column="0">
          <widget class="QPushButton" name="pushButtonCloseTree">
           <property name="text">
-           <string>свернуть всё</string>
+           <string>  свернуть всё  </string>
           </property>
          </widget>
         </item>
         <item row="1" column="1">
          <widget class="QPushButton" name="pushButtonOpenTree">
           <property name="text">
-           <string>развернуть всё</string>
+           <string>  развернуть всё  </string>
           </property>
          </widget>
         </item>
@@ -440,13 +450,21 @@
       <item>
        <widget class="QPushButton" name="pushButtonStartStop">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
         <property name="text">
-         <string>Старт</string>
+         <string>      Старт      </string>
+        </property>
+        <property name="flat">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
@@ -465,8 +483,23 @@
       </item>
       <item>
        <widget class="QPushButton" name="pushButtonCheckAudio">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+          <weight>50</weight>
+          <italic>false</italic>
+          <bold>false</bold>
+         </font>
+        </property>
         <property name="text">
-         <string>Проверка динамиков</string>
+         <string>Проверка
+     динамиков     </string>
         </property>
        </widget>
       </item>

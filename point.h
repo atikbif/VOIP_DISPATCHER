@@ -17,6 +17,8 @@ class Point
     double battery;
     Input di1,di2;
     bool do1,do2;
+    QString version = "не известно";
+    QString volume = "не известно";
     QTreeWidgetItem *item=nullptr;
     QTreeWidgetItem *speakerIitem=nullptr;
     QTreeWidgetItem *di1Item=nullptr;
@@ -25,6 +27,8 @@ class Point
     QTreeWidgetItem *do2Item=nullptr;
     QTreeWidgetItem *powerItem=nullptr;
     QTreeWidgetItem *batteryItem=nullptr;
+    QTreeWidgetItem *versionItem=nullptr;
+    QTreeWidgetItem *volumeItem=nullptr;
 public:
     explicit Point(QTreeWidgetItem *item,const QString &name);
     std::optional<std::any> getPointValue(const QString &param);

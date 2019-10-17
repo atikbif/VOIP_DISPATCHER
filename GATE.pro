@@ -55,6 +55,7 @@ SOURCES += \
     audiotree.cpp \
     coloredsqlquerymodel.cpp \
     dialogdate.cpp \
+    dialogvolumeconfig.cpp \
     group.cpp \
         main.cpp \
         mainwindow.cpp \
@@ -283,6 +284,7 @@ HEADERS += \
     audiotree.h \
     coloredsqlquerymodel.h \
     dialogdate.h \
+    dialogvolumeconfig.h \
     group.h \
         mainwindow.h \
     audioinputdevice.h \
@@ -382,6 +384,7 @@ HEADERS += \
 
 FORMS += \
     dialogdate.ui \
+    dialogvolumeconfig.ui \
         mainwindow.ui \
     dialogconfig.ui
 

@@ -28,6 +28,23 @@ QByteArray UDPWorker::createRequestWriteAudio(const QByteArray &input, bool sile
     return res;
 }
 
+QByteArray UDPWorker::createRequestSetVolume(quint8 group, quint8 point, quint8 value)
+{
+    QByteArray res;
+    res.append(static_cast<char>(id>>8));
+    res.append(static_cast<char>(id&0xFF));
+    res.append(0x05); // cmd check link
+    res.append(static_cast<char>(group));
+    res.append(static_cast<char>(point));
+    res.append(static_cast<char>(value));
+    int crc = CheckSum::getCRC16(res);
+    res.append(static_cast<char>(crc & 0xFF));
+    res.append(static_cast<char>(crc >> 8));
+    id++;
+    return res;
+
+}
+
 QByteArray UDPWorker::createRequestCheckLink()
 {
     QByteArray res;
@@ -215,12 +232,23 @@ void UDPWorker::checkAudio()
     checkAudioFlag = true;
 }
 
+void UDPWorker::setVolume(int group, int point, int value)
+{
+    QMutexLocker locker(&mutex);
+    volumeGroup = group;
+    volumePoint = point;
+    volumeValue = value;
+    volumeCmd = true;
+    //qDebug() << group << point << value;
+}
+
 void UDPWorker::scan()
 {
     bool workFlagState = false;
     bool finishFlagstate = false;
     bool newAudioPacketFlagState = false;
     bool checkAudioFlagState = false;
+    bool volumeCmdState = false;
     static char receiveBuf[1024];
     static char decodeBuf[3000];
     static int decodeBufOffset = 0;
@@ -242,11 +270,12 @@ void UDPWorker::scan()
         finishFlagstate = finishFlag;
         newAudioPacketFlagState = newAudioPacketFlag;
         checkAudioFlagState = checkAudioFlag;
+        volumeCmdState = volumeCmd;
         mutex.unlock();
         if(workFlagState) {
             if(udp.state()==QUdpSocket::UnconnectedState) {
                 udp.connectToHost(QHostAddress(ip),12145);
-                qDebug() << "TRY CONNECT" << ip;
+                //qDebug() << "TRY CONNECT" << ip;
                 //QThread::msleep(100);
             }
             if(QDateTime::currentMSecsSinceEpoch()-t>=100) {
@@ -260,6 +289,19 @@ void UDPWorker::scan()
                 }else {
                     readState(udp);
                     //qDebug() << QDateTime::currentMSecsSinceEpoch()-t;
+                }
+            }
+            if(volumeCmdState) {
+                mutex.lock();
+                volumeCmd = false;
+                udp.write(createRequestSetVolume(static_cast<quint8>(volumeGroup),static_cast<quint8>(volumePoint),static_cast<quint8>(volumeValue)));
+                mutex.unlock();
+                if(udp.waitForReadyRead(wait_time_ms)) {
+                    qint64 cnt = 0;
+                    while(udp.hasPendingDatagrams()) {
+                        cnt = udp.readDatagram(receiveBuf,sizeof(receiveBuf));
+                        if(cnt==0) break;
+                    }
                 }
             }
             if(newAudioPacketFlagState) {

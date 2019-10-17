@@ -12,6 +12,9 @@ Point::Point(QTreeWidgetItem *item, const QString &name):name(name),item(item)
         do2Item = new QTreeWidgetItem(item,QStringList()<< "Выход 2 (предстарт)"<<"не известно");
         powerItem = new QTreeWidgetItem(item,QStringList()<< "Питание, В"<<"не известно");
         batteryItem = new QTreeWidgetItem(item,QStringList()<< "Аккумулятор, В"<<"не известно");
+        versionItem = new QTreeWidgetItem(item,QStringList()<< "Версия"<<"не известно");
+        volumeItem = new QTreeWidgetItem(item,QStringList()<< "Громкость"<<"не известно");
+        //connect(volumeItem,&QTreeWidgetItem::)
     }
 }
 
@@ -25,6 +28,8 @@ std::optional<std::any> Point::getPointValue(const QString &param)
     else if(param=="di2") return std::make_optional<std::any>(di2);
     else if(param=="do1") return std::make_optional<std::any>(do1);
     else if(param=="do2") return std::make_optional<std::any>(do2);
+    else if(param=="version") return std::make_optional<std::any>(version);
+    else if(param=="volume") return std::make_optional<std::any>(volume);
     return std::nullopt;
 }
 
@@ -97,6 +102,12 @@ void Point::setPointValue(const QString &param, std::any value)
             do2=std::any_cast<bool>(value);
             if(do2) do2Item->setText(1,"Вкл");
             else do2Item->setText(1,"Выкл");
+        }else if(param=="version") {
+            version=std::any_cast<QString>(value);
+            versionItem->setText(1,version);
+        }else if(param=="volume") {
+            volume=std::any_cast<QString>(value);
+            volumeItem->setText(1,volume);
         }
     }
 }

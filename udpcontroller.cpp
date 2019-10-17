@@ -46,5 +46,10 @@ void UDPController::setToID(unsigned char group, unsigned char point)
 
 void UDPController::checkAudio()
 {
- worker->checkAudio();
+    worker->checkAudio();
+}
+
+void UDPController::setVolume(int group, int point, int value)
+{
+    worker->setVolume(group, point, value);
 }

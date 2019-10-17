@@ -11,6 +11,7 @@
 #include <QSqlQueryModel>
 #include "audiotree.h"
 #include <QStringList>
+#include "dialogvolumeconfig.h"
 
 QAudioDeviceInfo MainWindow::getInpDevice(const QString &name)
 {
@@ -79,6 +80,7 @@ void MainWindow::updatePointsList()
   int audio_tmr = conf.at(4).toInt();
   setTimerInterval(60*audio_tmr);
   int grCnt = conf.at(5).toInt();
+  ui->comboBoxGroups->clear();
   for(int i=0;i<grCnt;i++) {
       auto grName = tree->getGroupValue(i,"name");
       if(grName) {
@@ -145,7 +147,13 @@ void MainWindow::updateAlarmList(const QStringList &list)
 {
     ui->listWidgetAlarm->clear();
     QStringList newList;
-    if(linkState==false && buttonCmd==STOP) newList.append("АВАРИЯ (Обрыв Ethernet связи)");
+    if(linkState==false && buttonCmd==STOP) {
+        newList.append("АВАРИЯ (Обрыв Ethernet связи)");
+        if(alarmFlag==false) {
+            alarmFlag = true;
+            if(ui->checkBoxAlarm->isChecked()) sound->play();
+        }
+    }
     newList.append(list);
     if(newList.isEmpty()) {
         ui->listWidgetAlarm->addItem("Параметры в норме");
@@ -188,8 +196,6 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
           manager->setPointCnt(static_cast<quint8>(i),static_cast<quint8>(conf.at(6+i).toInt()));
       }
   }
-
-
 
     updatePointsList();
     QApplication::setStyle(new NorwegianWoodStyle);
@@ -255,6 +261,40 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
     ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :lightgray;}");
 
     ui->toolBar->addAction(QIcon(":/images/config.png"),"Настройка",[this](){QDialog *dialog = new DialogConfig();auto res = dialog->exec();if(res==QDialog::Accepted) updatePointsList();delete dialog;});
+    ui->toolBar->addAction(QIcon(":/images/volume.png"),"Громкость точек",[gate_cnt,conf,this](){
+        if (buttonCmd == STOP) {
+            DialogVolumeConfig *dialog = new DialogVolumeConfig();
+            if(tree!=nullptr) {
+                QStringList groups;
+                for(int i=0;i<gate_cnt;i++) {
+                    auto grName = tree->getGroupValue(i,"name");
+                    if(grName) groups.append(std::any_cast<QString>(grName.value()));
+                    if(conf.length()>=6+gate_cnt) {
+                        quint8 point_cnt = static_cast<quint8>(conf.at(6+i).toInt());
+                        QStringList points;
+                        QStringList volumes;
+                        for(int j=0;j<point_cnt;j++) {
+                            auto pointName = tree->getPointValue(i,j,"name");
+                            if(pointName) points.append(std::any_cast<QString>(pointName.value()));
+                            auto volume = tree->getPointValue(i,j,"volume");
+                            if(volume) volumes.append(std::any_cast<QString>(volume.value()));
+                        }
+                        dialog->addPoints(points);
+                        dialog->addVolume(volumes);
+                    }
+                }
+                dialog->addGroups(groups);
+            }
+            auto res = dialog->exec();
+            if(res==QDialog::Accepted) {
+                //qDebug() << dialog->getCurrentGroup() << dialog->getCurrentPoint() << dialog->getCurrentVolume();
+                if(udpScanner && dialog->getCurrentVolume()>=0) {
+                    udpScanner->setVolume(dialog->getCurrentGroup()+1,dialog->getCurrentPoint()+1,dialog->getCurrentVolume());
+                }
+            }
+            delete dialog;
+        }else QMessageBox::information(this,"Настройка громкости точки","Необходимо запустить опрос");
+    });
 
     ui->checkBox->setStyleSheet("QCheckBox::indicator {width: 64px; height: 64px; } QCheckBox::indicator:unchecked { image: url(:/speak.png); } QCheckBox::indicator:checked { image: url(:/listen.png); }");
     ui->checkBox->click();
@@ -266,6 +306,10 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
     ui->listWidgetAlarm->setFont(font);
 
     on_radioButtonAllPoints_clicked();
+
+    alarmStartTime = QDateTime::currentSecsSinceEpoch();
+    sound = new QSound(":/sounds/alarm.wav");
+    sound->setLoops(QSound::Infinite);
     //timer->start();
 
     //showMaximized();
@@ -312,7 +356,7 @@ void MainWindow::on_pushButtonStartStop_clicked()
         connect(m_audiOutputDevice.data(),&AudioOutputDevice::newOutLevel,this,&MainWindow::newOutLevel);
 
         buttonCmd = STOP;
-        ui->pushButtonStartStop->setText("Стоп");
+        ui->pushButtonStartStop->setText("      Стоп      ");
 
         m_audiOutputDevice->start();
         m_qaudioOutput->start(m_audiOutputDevice.data());
@@ -325,8 +369,15 @@ void MainWindow::on_pushButtonStartStop_clicked()
         manager->setIP(ip);
         udpScanner->start();
         linkState = false;
-        QTimer::singleShot(1000, this, [this](){if(linkState==false) {ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :red; }");manager->insertMessage("нет связи","авария");}});
-
+        QTimer::singleShot(1000, this, [this](){
+            if(linkState==false) {
+                ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :red; }");
+                manager->insertMessage("нет связи","авария");
+                updateAlarmList(QStringList());
+            }
+        });
+        sound->stop();
+        alarmFlag = false;
 
     }else {
         manager->insertMessage("Остановка опроса","сообщение");
@@ -335,7 +386,7 @@ void MainWindow::on_pushButtonStartStop_clicked()
         //m_qaudioOutput->suspend();
         //m_audiOutputDevice->stop();
         buttonCmd = START;
-        ui->pushButtonStartStop->setText("Старт");
+        ui->pushButtonStartStop->setText("      Старт      ");
 
         ui->comboBoxInput->setEnabled(true);
         ui->comboBoxOut->setEnabled(true);
@@ -344,6 +395,8 @@ void MainWindow::on_pushButtonStartStop_clicked()
 
 
         ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :lightgray; }");
+        sound->stop();
+        alarmFlag = false;
     }
 }
 
@@ -397,6 +450,7 @@ void MainWindow::fromIDChanged(unsigned char value)
 
 void MainWindow::updateState(const QByteArray &state)
 {
+    static int upd_cnt=0;
     QStringList alarmList;
     QStringList pointAlarms;
     QList<QTreeWidgetItem *> items = ui->treeWidget->findItems(
@@ -405,20 +459,23 @@ void MainWindow::updateState(const QByteArray &state)
 
     quint8 req_num = static_cast<quint8>(state.at(0));
     quint16 used_point_cnt = static_cast<quint16>((static_cast<quint16>(static_cast<quint8>(state.at(1)))<<8) | static_cast<quint8>(state.at(2)));
-    int req_points_cnt = (state.length()-3)/7;
-    if(used_point_cnt>req_points_cnt) used_point_cnt=static_cast<quint16>(req_points_cnt);
+    int req_points_cnt = (state.length()-3)/8;
+    if(used_point_cnt>req_points_cnt) return;//used_point_cnt=static_cast<quint16>(req_points_cnt);
+    //qDebug() << "update" << ++upd_cnt;
     if(req_num==0) {
         alarmPointList.clear();
         for(int i=0;i<used_point_cnt;i++) {
-            quint8 grNum = static_cast<quint8>(state.at(3+i*7));
-            quint8 pointNum = static_cast<quint8>(state.at(4+i*7));
+            quint8 grNum = static_cast<quint8>(state.at(3+i*8));
+            quint8 pointNum = static_cast<quint8>(state.at(4+i*8));
             if(grNum && pointNum) {
-                quint8 battery = static_cast<quint8>(state.at(5+i*7));
-                quint8 power = static_cast<quint8>(state.at(6+i*7));
+                quint8 battery = static_cast<quint8>(state.at(5+i*8));
+                quint8 power = static_cast<quint8>(state.at(6+i*8));
                 tree->setPointValue(grNum-1,pointNum-1,"battery",(static_cast<double>(battery))/10);
                 tree->setPointValue(grNum-1,pointNum-1,"power",(static_cast<double>(power))/10);
-                quint16 bits = static_cast<quint8>(state.at(8+i*7));
-                bits = static_cast<quint16>((static_cast<quint16>(bits)<<8) | static_cast<quint8>(state.at(9+i*7)));
+                quint8 vers = static_cast<quint8>(state.at(7+i*8));
+                quint16 bits = static_cast<quint8>(state.at(8+i*8));
+                bits = static_cast<quint16>((static_cast<quint16>(bits)<<8) | static_cast<quint8>(state.at(9+i*8)));
+                quint8 volume = static_cast<quint8>(state.at(10+i*8));
                 bool di1_state = bits & (1<<0);
                 bool di1_break = bits & (1<<1);
                 bool di1_short = bits & (1<<2);
@@ -429,6 +486,11 @@ void MainWindow::updateState(const QByteArray &state)
                 bool do2_state = bits & (1<<7);
                 bool speaker_state = bits & (1<<8);
                 bool speaker_check = bits & (1<<9);
+                if(vers<=200) tree->setPointValue(grNum-1,pointNum-1,"version",QString::number(vers)+QString(".0"));
+                else tree->setPointValue(grNum-1,pointNum-1,"version","Загрузчик " + QString::number(vers-200)+QString(".0"));
+                if(volume==0) tree->setPointValue(grNum-1,pointNum-1,"volume",QString("максимум"));
+                else if(volume>3) tree->setPointValue(grNum-1,pointNum-1,"volume",QString("некорректное значение") + QString::number(volume));
+                else tree->setPointValue(grNum-1,pointNum-1,"volume",QString("1/")+QString::number(pow(2,volume)));
                 if(di1_break) {
                     tree->setPointValue(grNum-1,pointNum-1,"di1",Input::BREAK);
                     auto grName = tree->getGroupValue(grNum-1,"name");
@@ -495,10 +557,22 @@ void MainWindow::updateState(const QByteArray &state)
             }
         }
     }
+    QStringList alarms;
     if(alarmGroupList.size() || alarmPointList.size()) {
-        QStringList alarms = alarmGroupList;
+        alarms = alarmGroupList;
         alarms.append(alarmPointList);
         updateAlarmList(alarms);
+    }
+    if(alarms.isEmpty()) {
+        alarmFlag = false;
+        sound->stop();
+    }
+    else {
+        if(alarmFlag==false) {
+            alarmStartTime=QDateTime::currentSecsSinceEpoch();
+            if(ui->checkBoxAlarm->isChecked()) sound->play();
+        }
+        alarmFlag = true;
     }
 }
 
@@ -562,7 +636,7 @@ void MainWindow::checkAudio()
 void MainWindow::startRecord(uint8_t gr, uint8_t point)
 {
     m_audiOutputDevice->startRecordCmd(gr,point);
-    qDebug() << gr << point;
+    //qDebug() << gr << point;
     QString res;
     if(gr && point) {
         auto grName = tree->getGroupValue(gr-1,"name");
@@ -776,7 +850,7 @@ void MainWindow::on_comboBoxGroups_currentIndexChanged(int index)
                     QRadioButton *rb = new QRadioButton(std::any_cast<QString>(pointName.value()));
                     connect(rb, &QRadioButton::toggled, [=](){
                         linkGroup = ui->comboBoxGroups->currentIndex()+1;linkPoint = i+1;
-                        qDebug() << linkGroup << linkPoint;
+                        //qDebug() << linkGroup << linkPoint;
                         if(udpScanner) udpScanner->setToID(static_cast<quint8>(linkGroup),static_cast<quint8>(linkPoint));
                     });
                     layout->addWidget(rb);
@@ -785,5 +859,15 @@ void MainWindow::on_comboBoxGroups_currentIndexChanged(int index)
             }
             layout->addStretch();
         }
+    }
+}
+
+
+void MainWindow::on_checkBoxAlarm_clicked(bool checked)
+{
+    if(checked) {
+        if(alarmFlag) sound->play();
+    }else {
+        sound->stop();
     }
 }

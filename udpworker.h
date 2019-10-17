@@ -16,6 +16,10 @@ class UDPWorker : public QObject
     bool finishFlag = false;
     bool newAudioPacketFlag = false;
     bool linkState = false;
+    bool volumeCmd = false;
+    int volumeGroup = 0;
+    int volumePoint = 0;
+    int volumeValue = 0;
     QByteArray packet;
 
     //SpeexBits bits;
@@ -40,6 +44,7 @@ class UDPWorker : public QObject
     qint64 startTime;
 
     QByteArray createRequestWriteAudio(const QByteArray &input, bool silentMode = false);
+    QByteArray createRequestSetVolume(quint8 group, quint8 point, quint8 value);
     QByteArray createRequestCheckLink();
     QByteArray createRequestReadState();
     QByteArray createRequestCheckAudio();
@@ -60,8 +65,9 @@ public:
     bool getLinkState() const;
     void setToID(unsigned char group, unsigned char point) {/*toID = id;*/grId=group;pointId=point;}
     void setSilentMode(bool value) {silent=value;}
-    void setIP(const QString &value) {ip=value;qDebug()<<ip;}
+    void setIP(const QString &value) {ip=value;}
     void checkAudio();
+    void setVolume(int group,int point, int value);
 
 signals:
   void linkStateChanged(bool value);

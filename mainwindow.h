@@ -11,6 +11,7 @@
 #include <QAudioRecorder>
 #include "sqlmanager.h"
 #include "audiotree.h"
+#include <QSound>
 
 namespace Ui {
 class MainWindow;
@@ -27,6 +28,8 @@ class MainWindow : public QMainWindow
     QTimer *speakerTimer;
     AudioTree *tree;
 
+    QSound *sound;
+
     QScopedPointer<AudioInputDevice> m_audioInputDevice;
     QScopedPointer<QAudioInput> m_qaudioInput;
 
@@ -39,6 +42,9 @@ class MainWindow : public QMainWindow
 
     QDate fromDate;
     QDate toDate;
+
+    qint64 alarmStartTime;
+    bool alarmFlag = false;
 
     QAudioDeviceInfo getInpDevice(const QString &name);
     QAudioDeviceInfo getOutDevice(const QString &name);
@@ -111,6 +117,9 @@ void on_radioButtonPoint_clicked();
 void on_radioButtonAllPoints_clicked();
 
 void on_comboBoxGroups_currentIndexChanged(int index);
+
+
+void on_checkBoxAlarm_clicked(bool checked);
 
 private:
     Ui::MainWindow *ui;

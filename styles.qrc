@@ -5,5 +5,7 @@
         <file>images/config.png</file>
         <file>listen.png</file>
         <file>speak.png</file>
+        <file>images/volume.png</file>
+        <file>sounds/alarm.wav</file>
     </qresource>
 </RCC>

@@ -68,8 +68,8 @@ class MainWindow : public QMainWindow
     QStringList alarmGroupList;
     QStringList alarmPointList;
 
-    int linkGroup;
-    int linkPoint;
+    int linkGroup=0;
+    int linkPoint=0;
 
     SQLManager *manager;
 
@@ -87,8 +87,8 @@ private slots:
     void newOutLevel(const QVector<double> &inp);
     void linkStatechanged(bool value);
     void fromIDChanged(unsigned char value);
-    void updateState(const QByteArray &state);
-    void updateGroupState(const QByteArray &state);
+    void updateState(const QByteArray state);
+    void updateGroupState(const QByteArray state);
     void checkAudio();
     void startRecord(uint8_t gr, uint8_t point);
     void stopRecord();
@@ -120,6 +120,8 @@ void on_comboBoxGroups_currentIndexChanged(int index);
 
 
 void on_checkBoxAlarm_clicked(bool checked);
+
+void on_radioButtonGroup_clicked();
 
 private:
     Ui::MainWindow *ui;

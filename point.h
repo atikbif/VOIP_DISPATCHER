@@ -33,6 +33,7 @@ public:
     explicit Point(QTreeWidgetItem *item,const QString &name);
     std::optional<std::any> getPointValue(const QString &param);
     void setPointValue(const QString &param, std::any value);
+    void setPointToDefault();
     void update();
 };
 

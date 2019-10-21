@@ -18,6 +18,7 @@ public:
     explicit AudioTree(QTreeWidget *tree);
     void setPointValue(int groupNum, int pointNum, const QString &param, std::any value);
     void setGroupValue(int groupNum, const QString &param, std::any value);
+    void setPointToDefault(int groupNum, int pointNum);
     std::optional<std::any> getPointValue(int groupNum, int pointNum, const QString &param);
     std::optional<std::any> getGroupValue(int groupNum, const QString &param);
     int groupCount();

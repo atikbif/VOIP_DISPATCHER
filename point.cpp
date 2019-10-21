@@ -112,6 +112,19 @@ void Point::setPointValue(const QString &param, std::any value)
     }
 }
 
+void Point::setPointToDefault()
+{
+    if(speakerIitem) speakerIitem->setText(1,"не известно");
+    if(di1Item) di1Item->setText(1,"не известно");
+    if(di2Item) di2Item->setText(1,"не известно");
+    if(do1Item) do1Item->setText(1,"не известно");
+    if(do2Item) do2Item->setText(1,"не известно");
+    if(powerItem) powerItem->setText(1,"не известно");
+    if(batteryItem) batteryItem->setText(1,"не известно");
+    if(versionItem) versionItem->setText(1,"не известно");
+    if(volumeItem) volumeItem->setText(1,"не известно");
+}
+
 void Point::update()
 {
 

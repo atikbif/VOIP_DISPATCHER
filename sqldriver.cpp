@@ -109,7 +109,7 @@ void SQLDriver::insertDatatoDataBase()
             next_insert = true;
         }else next_insert = false;
         for(quint16 i=start_pos;i<end_pos;i++) {
-            quint16 reg_offset = 3+i*7;
+            quint16 reg_offset = 3+i*8;
             if(reg_offset+7>=rawData.length()) return;
             quint8 gr_num = static_cast<quint8>(rawData.at(reg_offset));
             quint8 point_num = static_cast<quint8>(rawData.at(reg_offset+1));
@@ -173,7 +173,7 @@ void SQLDriver::insertDatatoDataBase()
         quint16 cnt = static_cast<quint16>(static_cast<quint8>(rawData.at(1)))<<8 | static_cast<quint8>(rawData.at(2));
         quint16 last_cnt = static_cast<quint16>(static_cast<quint8>(lastData.at(1)))<<8 | static_cast<quint8>(lastData.at(2));
         if(cnt==last_cnt) for(quint16 i=0;i<cnt;i++) {
-            quint16 reg_offset = 3+i*7;
+            quint16 reg_offset = 3+i*8;
             if(reg_offset+7>=rawData.length()) return;
             quint8 gr_num = static_cast<quint8>(rawData.at(reg_offset));
             quint8 point_num = static_cast<quint8>(rawData.at(reg_offset+1));

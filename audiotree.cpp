@@ -14,7 +14,12 @@ AudioTree::AudioTree(QTreeWidget *tree):tree(tree)
 void AudioTree::setPointValue(int groupNum, int pointNum, const QString &param, std::any value)
 {
     if(groupNum>=0 && groupNum<static_cast<int>(groups.size())) {
-        groups[static_cast<std::vector<Group>::size_type>(groupNum)].setPointValue(pointNum,param,value);
+        auto cnt = getGroupValue(groupNum,"real_point_cnt");
+        if(cnt) {
+            int real_cnt = std::any_cast<int>(cnt.value());
+            if(pointNum<real_cnt) groups[static_cast<std::vector<Group>::size_type>(groupNum)].setPointValue(pointNum,param,value);
+        }
+
     }
 }
 
@@ -22,6 +27,13 @@ void AudioTree::setGroupValue(int groupNum, const QString &param, std::any value
 {
     if(groupNum>=0 && (groupNum < static_cast<int>(groups.size()))) {
         groups[static_cast<std::vector<Group>::size_type>(groupNum)].setGroupValue(param,value);
+    }
+}
+
+void AudioTree::setPointToDefault(int groupNum, int pointNum)
+{
+    if(groupNum>=0 && (groupNum < static_cast<int>(groups.size()))) {
+        groups[static_cast<std::vector<Group>::size_type>(groupNum)].setPointToDefault(pointNum);
     }
 }
 

@@ -26,6 +26,7 @@ public:
     explicit Group(QTreeWidgetItem *item,const QString &name);
     void addNewPoint(const QString &name);
     void setPointValue(int pointNum, const QString &param, std::any value);
+    void setPointToDefault(int pointNum);
     std::optional<std::any> getPointValue(int pointNum, const QString &param);
     void setGroupValue(const QString &param, std::any value);
     std::optional<std::any> getGroupValue(const QString &param);

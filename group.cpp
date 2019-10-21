@@ -29,6 +29,13 @@ void Group::setPointValue(int pointNum, const QString &param, std::any value)
     }
 }
 
+void Group::setPointToDefault(int pointNum)
+{
+    if(pointNum>=0 && pointNum<static_cast<int>(points.size())) {
+        points[static_cast<std::vector<Point>::size_type>(pointNum)].setPointToDefault();
+    }
+}
+
 std::optional<std::any> Group::getPointValue(int pointNum, const QString &param)
 {
     if(pointNum>=0 && pointNum<static_cast<int>(points.size())) {

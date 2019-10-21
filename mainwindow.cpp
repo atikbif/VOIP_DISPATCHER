@@ -448,9 +448,8 @@ void MainWindow::fromIDChanged(unsigned char value)
     }
 }
 
-void MainWindow::updateState(const QByteArray &state)
+void MainWindow::updateState(const QByteArray state)
 {
-    static int upd_cnt=0;
     QStringList alarmList;
     QStringList pointAlarms;
     QList<QTreeWidgetItem *> items = ui->treeWidget->findItems(
@@ -461,7 +460,6 @@ void MainWindow::updateState(const QByteArray &state)
     quint16 used_point_cnt = static_cast<quint16>((static_cast<quint16>(static_cast<quint8>(state.at(1)))<<8) | static_cast<quint8>(state.at(2)));
     int req_points_cnt = (state.length()-3)/8;
     if(used_point_cnt>req_points_cnt) return;//used_point_cnt=static_cast<quint16>(req_points_cnt);
-    //qDebug() << "update" << ++upd_cnt;
     if(req_num==0) {
         alarmPointList.clear();
         for(int i=0;i<used_point_cnt;i++) {
@@ -561,7 +559,6 @@ void MainWindow::updateState(const QByteArray &state)
     if(alarmGroupList.size() || alarmPointList.size()) {
         alarms = alarmGroupList;
         alarms.append(alarmPointList);
-        updateAlarmList(alarms);
     }
     if(alarms.isEmpty()) {
         alarmFlag = false;
@@ -574,9 +571,10 @@ void MainWindow::updateState(const QByteArray &state)
         }
         alarmFlag = true;
     }
+    updateAlarmList(alarms);
 }
 
-void MainWindow::updateGroupState(const QByteArray &state)
+void MainWindow::updateGroupState(const QByteArray state)
 {
     alarmGroupList.clear();
     if(state.length()>=32*5) {
@@ -587,12 +585,15 @@ void MainWindow::updateGroupState(const QByteArray &state)
                // qDebug()<<num;
                 quint8 cnt = static_cast<quint8>(state.at(i*5+1));
                 tree->setGroupValue(i,"real_point_cnt",static_cast<int>(cnt));
-                if(cnt<tree->pointCount(num-1)) {
-                    auto grName = tree->getGroupValue(num-1,"name");
+                if(cnt<tree->pointCount(i)) {
+                    auto grName = tree->getGroupValue(i,"name");
                     alarmGroupList.append(std::any_cast<QString>(grName.value()) + ":");
                     alarmGroupList.append("АВАРИЯ: Число подключенных точек - " + QString::number(cnt));
-                    alarmGroupList.append("ожидается " + QString::number(tree->pointCount(num-1)));
+                    alarmGroupList.append("ожидается " + QString::number(tree->pointCount(i)));
                     alarmGroupList.append("");
+                    for(int j=cnt;j<tree->pointCount(i);j++) {
+                        tree->setPointToDefault(i,j);
+                    }
                 }
                 quint16 bits = static_cast<quint8>(state.at(3+i*5));
                 bits = static_cast<quint16>((static_cast<quint8>(bits)<<8) | static_cast<quint8>(state.at(4+i*5)));
@@ -623,6 +624,14 @@ void MainWindow::updateGroupState(const QByteArray &state)
                 tree->setGroupValue(i,"do1",do1_state);
                 tree->setGroupValue(i,"do2",do2_state);
                 tree->setGroupValue(i,"not_actual",not_actual);
+            }else {
+                if(tree->pointCount(i)) {
+                    auto grName = tree->getGroupValue(i,"name");
+                    alarmGroupList.append(std::any_cast<QString>(grName.value()) + ":");
+                    alarmGroupList.append("АВАРИЯ: Число подключенных точек - не известно");
+                    alarmGroupList.append("ожидается " + QString::number(tree->pointCount(i)));
+                    alarmGroupList.append("");
+                }
             }
         }
     }
@@ -818,8 +827,22 @@ void MainWindow::on_radioButtonPoint_clicked()
 {
     ui->scrollArea->setEnabled(true);
     ui->comboBoxGroups->setEnabled(true);
-    linkGroup &= ~(1<<7);
-    linkPoint &= ~(1<<7);
+
+    QVBoxLayout *layout = dynamic_cast<QVBoxLayout *>(ui->scrollArea->widget()->layout());
+    int p_num = 0;
+    if(layout) {
+        QLayoutItem *item;
+        int cnt = layout->count();
+        for(int i=0;i<cnt;i++) {
+            item = layout->itemAt(i);
+            QWidget* widget =  item->widget();
+            QRadioButton *rb = dynamic_cast<QRadioButton*>(widget);
+            if(rb && rb->isChecked()) {p_num=i;break;}
+        }
+    }
+
+    linkGroup = ui->comboBoxGroups->currentIndex()+1;
+    linkPoint = p_num+1;
     udpScanner->setToID(static_cast<quint8>(linkGroup),static_cast<quint8>(linkPoint));
 }
 
@@ -827,8 +850,9 @@ void MainWindow::on_radioButtonAllPoints_clicked()
 {
     ui->scrollArea->setEnabled(false);
     ui->comboBoxGroups->setEnabled(false);
-    linkGroup |= (1<<7);
-    linkPoint |= (1<<7);
+
+    linkGroup = 1;
+    linkPoint = 128;
     udpScanner->setToID(linkGroup,linkPoint);
 }
 
@@ -841,6 +865,11 @@ void MainWindow::on_comboBoxGroups_currentIndexChanged(int index)
           delete item->widget();
           delete item;
         }
+        if(ui->radioButtonGroup->isChecked()) {
+            linkGroup = (index+1) | (1<<7);
+            linkPoint = 1;
+            if(udpScanner) udpScanner->setToID(static_cast<quint8>(linkGroup),static_cast<quint8>(linkPoint));
+        }
         QStringList conf = readConf();
         if(index>=0 && conf.size()>6+index) {
             int pointCnt = conf.at(6+index).toInt();
@@ -849,9 +878,11 @@ void MainWindow::on_comboBoxGroups_currentIndexChanged(int index)
                 if(pointName) {
                     QRadioButton *rb = new QRadioButton(std::any_cast<QString>(pointName.value()));
                     connect(rb, &QRadioButton::toggled, [=](){
-                        linkGroup = ui->comboBoxGroups->currentIndex()+1;linkPoint = i+1;
-                        //qDebug() << linkGroup << linkPoint;
-                        if(udpScanner) udpScanner->setToID(static_cast<quint8>(linkGroup),static_cast<quint8>(linkPoint));
+                        if(ui->radioButtonPoint->isChecked()) {
+                            linkGroup = ui->comboBoxGroups->currentIndex()+1;linkPoint = i+1;
+                            if(udpScanner) udpScanner->setToID(static_cast<quint8>(linkGroup),static_cast<quint8>(linkPoint));
+                        }
+
                     });
                     layout->addWidget(rb);
                     if(i==0) rb->setChecked(true);
@@ -870,4 +901,16 @@ void MainWindow::on_checkBoxAlarm_clicked(bool checked)
     }else {
         sound->stop();
     }
+}
+
+void MainWindow::on_radioButtonGroup_clicked()
+{
+
+    ui->scrollArea->setEnabled(false);
+    ui->comboBoxGroups->setEnabled(true);
+    linkGroup = (ui->comboBoxGroups->currentIndex()+1)|(1<<7);
+    linkPoint = 1;
+    if(udpScanner) udpScanner->setToID(static_cast<quint8>(linkGroup),static_cast<quint8>(linkPoint));
+
+    //on_comboBoxGroups_currentIndexChanged(ui->comboBoxGroups->currentIndex());
 }

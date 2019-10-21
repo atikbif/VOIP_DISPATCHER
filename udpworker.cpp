@@ -12,9 +12,12 @@ QByteArray UDPWorker::createRequestWriteAudio(const QByteArray &input, bool sile
     res.append(static_cast<char>(id>>8));
     res.append(static_cast<char>(id&0xFF));
     if(silentMode) res.append(0x02);else res.append(0x01); // cmd write audio
-    if((grId&0x80) && (pointId&0x80)) {
+    if(pointId&0x80) {
         res.append(0x01);
         res.append(0xFF);
+    }else if(grId&0x80) {
+        res.append(grId & 0x7F);
+        res.append('\0');
     }else {
         res.append(grId);  // group number
         res.append(pointId);   // point number
@@ -140,15 +143,19 @@ void UDPWorker::readState(QUdpSocket &udp)
         }
         if(cnt>0) {
             //if(cnt>=100 && (quint8)receiveBuf[2]==0xD0) emit updateState(QByteArray::fromRawData(&receiveBuf[3],cnt-5));
-            if((quint8)receiveBuf[2]==0x04)
+            if((quint8)receiveBuf[2]==0x04  && cnt==1008)
             {
                 if(cnt>=100) {
-                    emit updateState(QByteArray::fromRawData(&receiveBuf[3],cnt-5));
+                    QByteArray state;
+                    state.append(QByteArray::fromRawData(&receiveBuf[3],cnt-5));
+                    emit updateState(state);
                 }
             }
-            if((quint8)receiveBuf[2]==0x03) {
+            else if((quint8)receiveBuf[2]==0x03  && cnt==165) {
 
-                emit updateGroupState(QByteArray::fromRawData(&receiveBuf[3],cnt-5));
+                QByteArray state;
+                state.append(QByteArray::fromRawData(&receiveBuf[3],cnt-5));
+                emit updateGroupState(state);
                 //qDebug() << QDateTime::currentMSecsSinceEpoch()-t;
                 //t= QDateTime::currentMSecsSinceEpoch();
             }
@@ -333,8 +340,9 @@ void UDPWorker::scan()
                           fromGroup = (quint8)receiveBuf[3];
                           fromPoint = (quint8)receiveBuf[4];
                           if(fromPoint>100) fromPoint = 0;
-                          //qDebug() << fromID;
-                          if(((grId&0x80) && (pointId&0x80)) || ((grId==fromGroup) && (pointId==fromPoint))) {
+                          qDebug() << grId << pointId << fromGroup << fromPoint;
+                          //if(((grId&0x80) && (pointId&0x80)) || ((grId==fromGroup) && (pointId==fromPoint)))
+                          {
                               //qDebug() << grId << pointId << fromGroup << fromPoint;
                           //if(fromID && (toID==0xFF || toID==fromID)) {
                               if(startFlag==false) {
@@ -349,7 +357,8 @@ void UDPWorker::scan()
                                   frame_size = opus_decode(dec, (unsigned char *)&receiveBuf[offset], pckt_length.at(i), (opus_int16 *)&decodeBuf[decodeBufOffset], 1024, 0);
                                   offset+=pckt_length.at(i);
                                   if(frame_size==160) {
-                                    QByteArray inp = QByteArray::fromRawData(&decodeBuf[decodeBufOffset], frame_size * 2);
+                                    QByteArray inp;
+                                    inp.append(QByteArray::fromRawData(&decodeBuf[decodeBufOffset], frame_size * 2));
                                     decodeBufOffset += frame_size * 2;
                                     if(decodeBufOffset>=sizeof (decodeBuf)) decodeBufOffset=0;
                                     emit updateAudio(inp);

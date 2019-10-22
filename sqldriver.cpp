@@ -70,11 +70,6 @@ void SQLDriver::initDataBase()
                    "tmr TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL"
                    ");");
     }
-    /*journalModel = new QSqlQueryModel(nullptr);
-    pointModel = new QSqlQueryModel(nullptr);
-    groupModel = new QSqlQueryModel(nullptr);
-    groupAlarmModel = new QSqlQueryModel(nullptr);
-    pointAlarmModel = new QSqlQueryModel(nullptr);*/
     journalModel = new ColoredSqlQueryModel(nullptr);
     pointModel = new ColoredSqlQueryModel(nullptr);
     groupModel = new ColoredSqlQueryModel(nullptr);
@@ -87,9 +82,7 @@ void SQLDriver::insertDatatoDataBase()
     double acc, pow;
     QString di1,di2,do1,do2,speaker;
     QString gdi1,gdi2,gdi3,gdo1,gdo2;
-    double last_acc, last_pow;
-    QString last_di1, last_di2, last_do1, last_do2,last_speaker;
-    QString last_gdi1, last_gdi2, last_gdi3, last_gdo1, last_gdo2;
+
 
     static qint64 last_sec = 0;
     static bool next_insert = false;
@@ -201,6 +194,9 @@ void SQLDriver::insertDatatoDataBase()
             quint8 last_point_num = static_cast<quint8>(lastData.at(reg_offset+1));
 
             if(last_gr_num==gr_num && last_point_num==point_num) {
+                double last_acc, last_pow;
+                QString last_di1, last_di2, last_do1, last_do2,last_speaker;
+                QString last_gdi1, last_gdi2, last_gdi3, last_gdo1, last_gdo2;
 
                 if(gr_num && groupCorrectDataFlag.at(gr_num-1)) {
                     last_acc = static_cast<double>(static_cast<quint8>(lastData.at(reg_offset+2)))/10;
@@ -286,7 +282,6 @@ void SQLDriver::insertGroupDatatoDataBase()
     QString gdi1,gdi2,gdi3,gdo1,gdo2;
     bool gnot_act;
     QString last_gdi1, last_gdi2, last_gdi3, last_gdo1, last_gdo2;
-    bool last_gnot_act;
     static qint64 last_sec = 0;
 
     if(QDateTime::currentSecsSinceEpoch()-last_sec>=10) {
@@ -355,9 +350,11 @@ void SQLDriver::insertGroupDatatoDataBase()
     }else {
         int length = rawGroupData.length()/5;
         int lastLength = rawGroupData.length()/5;
+
         if(length==lastLength)
         for(int i=0;i<length;i++) {
             if(rawGroupData.at(i*5)==i+1) {
+                bool last_gnot_act = false;
                 uint16_t bits = (quint8)rawGroupData.at(i*5+3);
                 bits = (bits<<8) | (quint8)rawGroupData.at(i*5+4);
                 uint8_t cnt = (quint8)rawGroupData.at(i*5+1);
@@ -453,9 +450,7 @@ void SQLDriver::insertGroupDatatoDataBase()
 SQLDriver::SQLDriver(QObject *parent) : QObject(parent)
 {
     for(int i=0;i<32;i++) point_cnt.push_back(0);
-    for(auto &flag:groupCorrectDataFlag) {
-        flag = 0;
-    }
+    std::fill(groupCorrectDataFlag.begin(),groupCorrectDataFlag.end(),0);
 }
 
 void SQLDriver::finish()
@@ -609,17 +604,13 @@ void SQLDriver::addGateAlarm(const QString &ip_addr, quint8 gate_num, const QStr
 
 void SQLDriver::work()
 {
-    bool finishFlagState = false;
-    bool initFlagState = false;
-    bool insertGroupFlagState = false;
-    bool insertFlagState = false;
     db = QSqlDatabase::addDatabase("QODBC");
     for(;;) {
         mutex.lock();
-        finishFlagState = finishFlag;
-        initFlagState = initFlag;
-        insertFlagState = insertFlag;
-        insertGroupFlagState = insertGroupFlag;
+        bool finishFlagState = finishFlag;
+        bool initFlagState = initFlag;
+        bool insertFlagState = insertFlag;
+        bool insertGroupFlagState = insertGroupFlag;
         mutex.unlock();
         if(initFlagState) {
             mutex.lock();

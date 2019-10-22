@@ -21,9 +21,9 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
-    enum { START, STOP };
+    enum class ButtonState { START, STOP };
 
-    bool buttonCmd = START;
+    ButtonState buttonCmd = ButtonState::START;
 
     QTimer *speakerTimer;
     AudioTree *tree;

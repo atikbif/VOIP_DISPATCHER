@@ -3,6 +3,12 @@
 
 Point::Point(QTreeWidgetItem *item, const QString &name):name(name),item(item)
 {
+    di1 = Input::OFF;
+    di2 = Input::OFF;
+    power = 0;
+    battery = 0;
+    do1 = false;
+    do2 = false;
     if(item) {
         item->setText(0,name);
         speakerIitem = new QTreeWidgetItem(item,QStringList()<< "Динамики"<<"не известно");

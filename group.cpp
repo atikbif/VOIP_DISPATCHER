@@ -2,6 +2,10 @@
 
 Group::Group(QTreeWidgetItem *item, const QString &name):name(name),item(item)
 {
+    di1 = Input::OFF;
+    di2 = Input::OFF;
+    di3 = Input::OFF;
+    real_point_cnt = 0;
     points.reserve(100);
     if(item) {
         item->setText(0,name);
@@ -79,7 +83,6 @@ void Group::setGroupValue(const QString &param, std::any value)
             else do1Item->setText(1,"Выкл");
         }
         else if(param=="do2") {
-            do2=std::any_cast<bool>(value);
             do2=std::any_cast<bool>(value);
             if(do2) do2Item->setText(1,"Вкл");
             else do2Item->setText(1,"Выкл");

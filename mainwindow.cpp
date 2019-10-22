@@ -147,7 +147,7 @@ void MainWindow::updateAlarmList(const QStringList &list)
 {
     ui->listWidgetAlarm->clear();
     QStringList newList;
-    if(linkState==false && buttonCmd==STOP) {
+    if(linkState==false && buttonCmd==ButtonState::STOP) {
         newList.append("АВАРИЯ (Обрыв Ethernet связи)");
         if(alarmFlag==false) {
             alarmFlag = true;
@@ -262,7 +262,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
 
     ui->toolBar->addAction(QIcon(":/images/config.png"),"Настройка",[this](){QDialog *dialog = new DialogConfig();auto res = dialog->exec();if(res==QDialog::Accepted) updatePointsList();delete dialog;});
     ui->toolBar->addAction(QIcon(":/images/volume.png"),"Громкость точек",[gate_cnt,conf,this](){
-        if (buttonCmd == STOP) {
+        if (buttonCmd == ButtonState::STOP) {
             DialogVolumeConfig *dialog = new DialogVolumeConfig();
             if(tree!=nullptr) {
                 QStringList groups;
@@ -338,7 +338,7 @@ void MainWindow::on_pushButtonStartStop_clicked()
     }
 
 
-    if (buttonCmd == START) {
+    if (buttonCmd == ButtonState::START) {
         manager->insertMessage("Запуск опроса","сообщение");
         m_audioInputDevice.reset(new AudioInputDevice(format,udpScanner));
         connect(m_audioInputDevice.data(),&AudioInputDevice::newLevel,this,&MainWindow::newLevel);
@@ -355,7 +355,7 @@ void MainWindow::on_pushButtonStartStop_clicked()
         connect(udpScanner,&UDPController::updateAudio,m_audiOutputDevice.data(),&AudioOutputDevice::updateAudio);
         connect(m_audiOutputDevice.data(),&AudioOutputDevice::newOutLevel,this,&MainWindow::newOutLevel);
 
-        buttonCmd = STOP;
+        buttonCmd = ButtonState::STOP;
         ui->pushButtonStartStop->setText("      Стоп      ");
 
         m_audiOutputDevice->start();
@@ -385,7 +385,7 @@ void MainWindow::on_pushButtonStartStop_clicked()
         m_audioInputDevice->stop();
         //m_qaudioOutput->suspend();
         //m_audiOutputDevice->stop();
-        buttonCmd = START;
+        buttonCmd = ButtonState::START;
         ui->pushButtonStartStop->setText("      Старт      ");
 
         ui->comboBoxInput->setEnabled(true);
@@ -452,8 +452,6 @@ void MainWindow::updateState(const QByteArray state)
 {
     QStringList alarmList;
     QStringList pointAlarms;
-    QList<QTreeWidgetItem *> items = ui->treeWidget->findItems(
-                QString("*"), Qt::MatchWrap | Qt::MatchWildcard | Qt::MatchRecursive);
     manager->insertData(state);
 
     quint8 req_num = static_cast<quint8>(state.at(0));
@@ -723,7 +721,7 @@ void MainWindow::on_checkBox_clicked()
 
         dispRecorder = nullptr;
     }
-    if(buttonCmd == STOP) {
+    if(buttonCmd == ButtonState::STOP) {
         if(ui->checkBox->isChecked()) {
 
         }else {

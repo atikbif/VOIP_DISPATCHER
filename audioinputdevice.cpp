@@ -69,7 +69,6 @@ qint64 AudioInputDevice::writeData(const char *data, qint64 len)
     //static long ex_offset = 0;
     static QByteArray curBuf;
     QByteArray udpBuf;
-    int nbBytes;
     //static const int udpBufMaxLength = 40;
     qint64 res = len;
 
@@ -94,7 +93,7 @@ qint64 AudioInputDevice::writeData(const char *data, qint64 len)
     udpBuf.append(static_cast<char>(pckt_cnt));
     for(int i=0;i<pckt_cnt;i++) udpBuf.append('\0');
     while (len>=320) {
-        nbBytes = opus_encode(enc, (opus_int16*)&data[offset], 160,(unsigned char*) cbits, 1024);
+        int nbBytes = opus_encode(enc, (opus_int16*)&data[offset], 160,(unsigned char*) cbits, 1024);
         //nbBytes = opus_encode(enc, (opus_int16*)&wav_ex[ex_offset], 160,(unsigned char*) cbits, 1024);
         //ex_offset+=320;if(ex_offset>=sizeof (wav_ex)) ex_offset=0;
         udpBuf[1+pckt_num] = static_cast<char>(nbBytes);

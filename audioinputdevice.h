@@ -25,7 +25,7 @@ class AudioInputDevice : public QIODevice
   //void *dec_state;
   QByteArray micrData;
   qint16 input[FRAME_SIZE];
-  char cbits[1024];
+  char cbits[1024]={};
   quint32 m_maxAmplitude = 0;   // audio data max value
   //QUdpSocket udp;
   static quint16 id;    // request id

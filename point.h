@@ -12,7 +12,7 @@ enum class Input{ON,OFF,SHORT,BREAK};
 class Point
 {
     QString name;
-    Speaker speaker;
+    Speaker speaker = Speaker::NOT_CHECKED;
     double power;
     double battery;
     Input di1,di2;
@@ -31,6 +31,8 @@ class Point
     QTreeWidgetItem *volumeItem=nullptr;
 public:
     explicit Point(QTreeWidgetItem *item,const QString &name);
+    Point(const Point &obj) = default;
+    Point& operator=(const Point &obj) = default;
     std::optional<std::any> getPointValue(const QString &param);
     void setPointValue(const QString &param, std::any value);
     void setPointToDefault();

@@ -40,6 +40,7 @@ void DialogConfig::readData()
         for(int j=0;j<ui->tablePointWidget->rowCount();j++) {
             gate.points.push_back("");
         }
+        gate.count=0;
         gates.push_back(gate);
     }
     QFile confFile("conf.json");

@@ -102,9 +102,10 @@ QByteArray UDPWorker::createRequestCheckAudio()
 void UDPWorker::checkLink(QUdpSocket &udp)
 {
     static quint16 err_cnt=0;
-    static char receiveBuf[1024];
+
     udp.write(createRequestCheckLink());
     if(udp.waitForReadyRead(wait_time_ms)) {
+        static char receiveBuf[1024];
         qint64 cnt = 0;
         while(udp.hasPendingDatagrams()) {
             cnt = udp.readDatagram(receiveBuf,sizeof(receiveBuf));
@@ -145,11 +146,9 @@ void UDPWorker::readState(QUdpSocket &udp)
             //if(cnt>=100 && (quint8)receiveBuf[2]==0xD0) emit updateState(QByteArray::fromRawData(&receiveBuf[3],cnt-5));
             if((quint8)receiveBuf[2]==0x04  && cnt==1008)
             {
-                if(cnt>=100) {
-                    QByteArray state;
-                    state.append(QByteArray::fromRawData(&receiveBuf[3],cnt-5));
-                    emit updateState(state);
-                }
+                QByteArray state;
+                state.append(QByteArray::fromRawData(&receiveBuf[3],cnt-5));
+                emit updateState(state);
             }
             else if((quint8)receiveBuf[2]==0x03  && cnt==165) {
 
@@ -180,12 +179,12 @@ void UDPWorker::readState(QUdpSocket &udp)
 
 void UDPWorker::checkAudioCmd(QUdpSocket &udp)
 {
-    static char receiveBuf[1024];
+
     udp.write(createRequestCheckAudio());
     if(udp.waitForReadyRead(wait_time_ms)) {
-        qint64 cnt = 0;
+        static char receiveBuf[1024];
         while(udp.hasPendingDatagrams()) {
-            cnt = udp.readDatagram(receiveBuf,sizeof(receiveBuf));
+            qint64 cnt = udp.readDatagram(receiveBuf,sizeof(receiveBuf));
             if(cnt==0) break;
         }
     }
@@ -251,11 +250,6 @@ void UDPWorker::setVolume(int group, int point, int value)
 
 void UDPWorker::scan()
 {
-    bool workFlagState = false;
-    bool finishFlagstate = false;
-    bool newAudioPacketFlagState = false;
-    bool checkAudioFlagState = false;
-    bool volumeCmdState = false;
     static char receiveBuf[1024];
     static char decodeBuf[3000];
     static int decodeBufOffset = 0;
@@ -273,11 +267,11 @@ void UDPWorker::scan()
 
     for (;;) {
         mutex.lock();
-        workFlagState = workFlag;
-        finishFlagstate = finishFlag;
-        newAudioPacketFlagState = newAudioPacketFlag;
-        checkAudioFlagState = checkAudioFlag;
-        volumeCmdState = volumeCmd;
+        bool workFlagState = workFlag;
+        bool finishFlagstate = finishFlag;
+        bool newAudioPacketFlagState = newAudioPacketFlag;
+        bool checkAudioFlagState = checkAudioFlag;
+        bool volumeCmdState = volumeCmd;
         mutex.unlock();
         if(workFlagState) {
             if(udp.state()==QUdpSocket::UnconnectedState) {
@@ -330,7 +324,8 @@ void UDPWorker::scan()
                       if(check_length) {
                           for(int i=0;i<pckt_cnt;i++) pckt_length.push_back((quint8)receiveBuf[6+i]);
                           check_length = false;
-                          for(int l:pckt_length) if(l) check_length=true;
+                          //for(int l:pckt_length) if(l) check_length=true;
+                          if(std::any_of(pckt_length.begin(),pckt_length.end(),[](int i){return i!=0;})) check_length=true;
                       }
 
                       if(check_length) {
@@ -352,9 +347,8 @@ void UDPWorker::scan()
                               if(startFlag) startTime = QDateTime::currentMSecsSinceEpoch();
                               int offset = 6+pckt_cnt;
                               decodeBufOffset = 0;
-                              int frame_size=0;
                               for(int i=0;i<pckt_cnt;i++) {
-                                  frame_size = opus_decode(dec, (unsigned char *)&receiveBuf[offset], pckt_length.at(i), (opus_int16 *)&decodeBuf[decodeBufOffset], 1024, 0);
+                                  int frame_size = opus_decode(dec, (unsigned char *)&receiveBuf[offset], pckt_length.at(i), (opus_int16 *)&decodeBuf[decodeBufOffset], 1024, 0);
                                   offset+=pckt_length.at(i);
                                   if(frame_size==160) {
                                     QByteArray inp;

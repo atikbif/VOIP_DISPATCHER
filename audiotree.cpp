@@ -88,10 +88,10 @@ void AudioTree::createTree()
               for (int i = 0; i < groupCnt; ++i) {
                 QJsonObject gateOb = jsGates[i].toObject();
                 if(gateOb.contains("name")) {
-                  QString name = gateOb["name"].toString();
+                  QString gr_name = gateOb["name"].toString();
                   QTreeWidgetItem *gr = new QTreeWidgetItem();
                   tree->addTopLevelItem(gr);
-                  Group g(gr,name);
+                  Group g(gr,gr_name);
                   int pointCnt = 0;
                   if(gateOb.contains("cnt")) {
                       pointCnt = gateOb["cnt"].toInt();
@@ -103,8 +103,8 @@ void AudioTree::createTree()
                       for(int j=0;j<pointCnt;j++) {
                           QJsonObject pointOb = jsPoints[j].toObject();
                           if(pointOb.contains("name")) {
-                              QString name = pointOb["name"].toString();
-                              g.addNewPoint(name);
+                              QString point_name = pointOb["name"].toString();
+                              g.addNewPoint(point_name);
                           }
                       }
                   }

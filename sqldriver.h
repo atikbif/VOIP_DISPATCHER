@@ -42,11 +42,11 @@ class SQLDriver : public QObject
     QSqlQueryModel *groupModel;
     QSqlQueryModel *groupAlarmModel;
     QSqlQueryModel *pointAlarmModel;*/
-    ColoredSqlQueryModel *journalModel;
-    ColoredSqlQueryModel *pointModel;
-    ColoredSqlQueryModel *groupModel;
-    ColoredSqlQueryModel *groupAlarmModel;
-    ColoredSqlQueryModel *pointAlarmModel;
+    ColoredSqlQueryModel *journalModel=nullptr;
+    ColoredSqlQueryModel *pointModel=nullptr;
+    ColoredSqlQueryModel *groupModel=nullptr;
+    ColoredSqlQueryModel *groupAlarmModel=nullptr;
+    ColoredSqlQueryModel *pointAlarmModel=nullptr;
 
     void initDataBase();
     void insertDatatoDataBase();

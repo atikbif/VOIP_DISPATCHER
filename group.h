@@ -12,7 +12,7 @@ class Group
     QString name;
     int real_point_cnt;
     Input di1,di2,di3;
-    bool do1,do2;
+    bool do1=false,do2=false;
     bool not_actual=false;
     std::vector<Point> points;
     QTreeWidgetItem *item=nullptr;
@@ -23,6 +23,8 @@ class Group
     QTreeWidgetItem *do2Item=nullptr;
     QTreeWidgetItem *cntItem=nullptr;
 public:
+    Group(const Group& obj) = default;
+    Group& operator=(const Group &obj) = default;
     explicit Group(QTreeWidgetItem *item,const QString &name);
     void addNewPoint(const QString &name);
     void setPointValue(int pointNum, const QString &param, std::any value);

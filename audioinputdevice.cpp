@@ -31,7 +31,7 @@ AudioInputDevice::AudioInputDevice(const QAudioFormat &format,UDPController *sca
     enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_RESTRICTED_LOWDELAY, &error);
     //enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_AUDIO, &error);
     //opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_NARROWBAND));
-    opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(10));
+    opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(4));
     //opus_encoder_ctl(enc, OPUS_SET_BITRATE(16000));
     dec = opus_decoder_create(8000, 1, &error);
 

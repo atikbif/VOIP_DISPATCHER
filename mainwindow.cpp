@@ -343,7 +343,7 @@ void MainWindow::on_pushButtonStartStop_clicked()
         m_audioInputDevice.reset(new AudioInputDevice(format,udpScanner));
         connect(m_audioInputDevice.data(),&AudioInputDevice::newLevel,this,&MainWindow::newLevel);
         m_qaudioInput.reset(new QAudioInput(inpDeviceInfo, format));
-        m_qaudioInput->setVolume(0.5);
+        m_qaudioInput->setVolume(1.0);
         m_audioInputDevice->start();
         m_qaudioInput->start(m_audioInputDevice.data());
 

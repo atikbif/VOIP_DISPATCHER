@@ -17,6 +17,7 @@ class Point
     double battery;
     Input di1,di2;
     bool do1,do2;
+    bool limit_switch;
     QString version = "не известно";
     QString volume = "не известно";
     QTreeWidgetItem *item=nullptr;
@@ -29,6 +30,7 @@ class Point
     QTreeWidgetItem *batteryItem=nullptr;
     QTreeWidgetItem *versionItem=nullptr;
     QTreeWidgetItem *volumeItem=nullptr;
+    QTreeWidgetItem *limitSwitchItem=nullptr;
 public:
     explicit Point(QTreeWidgetItem *item,const QString &name);
     Point(const Point &obj) = default;

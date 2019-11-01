@@ -21,6 +21,8 @@ class UDPWorker : public QObject
     int volumePoint = 0;
     int volumeValue = 0;
     QByteArray packet;
+    static const quint8 call_wav[];
+    int call_offset=0;
 
     //SpeexBits bits;
     //void *state;

@@ -20,6 +20,7 @@ Point::Point(QTreeWidgetItem *item, const QString &name):name(name),item(item)
         batteryItem = new QTreeWidgetItem(item,QStringList()<< "Аккумулятор, В"<<"не известно");
         versionItem = new QTreeWidgetItem(item,QStringList()<< "Версия"<<"не известно");
         volumeItem = new QTreeWidgetItem(item,QStringList()<< "Громкость"<<"не известно");
+        limitSwitchItem = new QTreeWidgetItem(item,QStringList()<<"Концевик"<<"не известно");
         //connect(volumeItem,&QTreeWidgetItem::)
     }
 }
@@ -36,6 +37,7 @@ std::optional<std::any> Point::getPointValue(const QString &param)
     else if(param=="do2") return std::make_optional<std::any>(do2);
     else if(param=="version") return std::make_optional<std::any>(version);
     else if(param=="volume") return std::make_optional<std::any>(volume);
+    else if(param=="limit_switch") return std::make_optional<std::any>(limit_switch);
     return std::nullopt;
 }
 
@@ -114,6 +116,10 @@ void Point::setPointValue(const QString &param, std::any value)
         }else if(param=="volume") {
             volume=std::any_cast<QString>(value);
             volumeItem->setText(1,volume);
+        }else if(param=="limit_switch") {
+            limit_switch=std::any_cast<bool>(value);
+            if(limit_switch) limitSwitchItem->setText(1,"Вкл");
+            else limitSwitchItem->setText(1,"Выкл");
         }
     }
 }
@@ -129,6 +135,7 @@ void Point::setPointToDefault()
     if(batteryItem) batteryItem->setText(1,"не известно");
     if(versionItem) versionItem->setText(1,"не известно");
     if(volumeItem) volumeItem->setText(1,"не известно");
+    if(limitSwitchItem) limitSwitchItem->setText(1,"не известно");
 }
 
 void Point::update()

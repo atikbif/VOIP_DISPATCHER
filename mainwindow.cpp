@@ -482,6 +482,7 @@ void MainWindow::updateState(const QByteArray state)
                 bool do2_state = bits & (1<<7);
                 bool speaker_state = bits & (1<<8);
                 bool speaker_check = bits & (1<<9);
+                bool limit_switch = bits & (1<<10);
                 if(vers<=200) tree->setPointValue(grNum-1,pointNum-1,"version",QString::number(vers)+QString(".0"));
                 else tree->setPointValue(grNum-1,pointNum-1,"version","Загрузчик " + QString::number(vers-200)+QString(".0"));
                 if(volume==0) tree->setPointValue(grNum-1,pointNum-1,"volume",QString("максимум"));
@@ -533,6 +534,7 @@ void MainWindow::updateState(const QByteArray state)
                 else {tree->setPointValue(grNum-1,pointNum-1,"di2",Input::OFF);}
                 tree->setPointValue(grNum-1,pointNum-1,"do1",do1_state);
                 tree->setPointValue(grNum-1,pointNum-1,"do2",do2_state);
+                tree->setPointValue(grNum-1,pointNum-1,"limit_switch",limit_switch);
                 if(speaker_check==false) {tree->setPointValue(grNum-1,pointNum-1,"speaker",Speaker::NOT_CHECKED);}
                 else {
                     if(speaker_state) {tree->setPointValue(grNum-1,pointNum-1,"speaker",Speaker::CORRECT);}
@@ -606,7 +608,7 @@ void MainWindow::updateGroupState(const QByteArray state)
                 bool di3_short = bits & (1<<8);
                 bool do1_state = bits & (1<<9);
                 bool do2_state = bits & (1<<10);
-                bool not_actual = bits & (1<<11);
+                bool not_actual = bits & (1<<13);
                 if(di1_break) {tree->setGroupValue(i,"di1",Input::BREAK);}
                 else if(di1_short) {tree->setGroupValue(i,"di1",Input::SHORT);}
                 else if(di1_state) {tree->setGroupValue(i,"di1",Input::ON);}

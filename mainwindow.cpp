@@ -11,7 +11,9 @@
 #include <QSqlQueryModel>
 #include "audiotree.h"
 #include <QStringList>
+#include <QStyle>
 #include "dialogvolumeconfig.h"
+#include "mp3recorder.h"
 
 QAudioDeviceInfo MainWindow::getInpDevice(const QString &name)
 {
@@ -151,7 +153,7 @@ void MainWindow::updateAlarmList(const QStringList &list)
         newList.append("АВАРИЯ (Обрыв Ethernet связи)");
         if(alarmFlag==false) {
             alarmFlag = true;
-            if(ui->checkBoxAlarm->isChecked()) sound->play();
+            if(ui->checkBoxAlarm->isChecked() && (!ui->checkBoxSound->isChecked())) sound->play();
         }
     }
     newList.append(list);
@@ -177,12 +179,15 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
   ui->lineEditFrom->setText(fromDate.toString("dd-MM-yyyy"));
   ui->lineEditTo->setText(toDate.toString("dd-MM-yyyy"));
 
+  ui->checkBoxSound->setEnabled(false);
+  ui->pushButtonMicrophone->setEnabled(false);
+
   qRegisterMetaType<uint8_t>("uint8_t");
 
   speakerTimer = nullptr;
-  dispRecorder = nullptr;
   udpScanner = nullptr;
 
+  recorder = new MP3Recorder();
   manager = new SQLManager();
   connect(manager,&SQLManager::error,this,&MainWindow::sqlError);
   connect(manager,&SQLManager::updateAlarmList,this,&MainWindow::updateAlarmList);
@@ -259,6 +264,20 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
     connect(udpScanner, &UDPController::stopRecord,this,&MainWindow::stopRecord);
 
     ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :lightgray;}");
+    ui->pushButtonMicrophone->setStyle(new QCommonStyle);
+    ui->pushButtonMicrophone->setStyleSheet("QPushButton {"
+        "border: 2px solid #8f8f91;"
+        "border-radius: 30px;"
+        "background-color: lightgray;"
+        "outline: none;"
+         "padding: 10px;"
+    "}"
+    "QPushButton:pressed {"
+        "background-color: lightgreen;"
+    "}");
+    ui->pushButtonMicrophone->setFlat(true);
+    on_pushButtonMicrophone_released();
+
 
     ui->toolBar->addAction(QIcon(":/images/config.png"),"Настройка",[this](){QDialog *dialog = new DialogConfig();auto res = dialog->exec();if(res==QDialog::Accepted) updatePointsList();delete dialog;});
     ui->toolBar->addAction(QIcon(":/images/volume.png"),"Громкость точек",[gate_cnt,conf,this](){
@@ -295,9 +314,6 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
             delete dialog;
         }else QMessageBox::information(this,"Настройка громкости точки","Необходимо запустить опрос");
     });
-
-    ui->checkBox->setStyleSheet("QCheckBox::indicator {width: 64px; height: 64px; } QCheckBox::indicator:unchecked { image: url(:/speak.png); } QCheckBox::indicator:checked { image: url(:/listen.png); }");
-    ui->checkBox->click();
 
     QFont font = QFont ("Courier");
     font.setStyleHint (QFont::Monospace);
@@ -379,7 +395,14 @@ void MainWindow::on_pushButtonStartStop_clicked()
         sound->stop();
         alarmFlag = false;
 
-    }else {
+        ui->checkBoxSound->setEnabled(true);
+        ui->pushButtonMicrophone->setEnabled(true);
+
+
+    }else {        
+        recorder->runFlag = false;
+        recorder->stopRecord();
+
         manager->insertMessage("Остановка опроса","сообщение");
         m_qaudioInput->suspend();
         m_audioInputDevice->stop();
@@ -397,6 +420,9 @@ void MainWindow::on_pushButtonStartStop_clicked()
         ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :lightgray; }");
         sound->stop();
         alarmFlag = false;
+
+        ui->checkBoxSound->setEnabled(false);
+        ui->pushButtonMicrophone->setEnabled(false);
     }
 }
 
@@ -567,7 +593,7 @@ void MainWindow::updateState(const QByteArray state)
     else {
         if(alarmFlag==false) {
             alarmStartTime=QDateTime::currentSecsSinceEpoch();
-            if(ui->checkBoxAlarm->isChecked()) sound->play();
+            if(ui->checkBoxAlarm->isChecked() && (!ui->checkBoxSound->isChecked())) sound->play();
         }
         alarmFlag = true;
     }
@@ -671,6 +697,7 @@ void MainWindow::sqlError(const QString &message)
 
 void MainWindow::radioButton_toggled(bool checked)
 {
+    Q_UNUSED(checked)
     /*if(checked) {
         QRadioButton *rb = dynamic_cast<QRadioButton*>(sender());
         if(rb) {
@@ -678,80 +705,6 @@ void MainWindow::radioButton_toggled(bool checked)
             udpScanner->setToID(static_cast<quint8>(id));
         }
     }*/
-}
-
-void MainWindow::on_checkBox_clicked()
-{
-    static QString fName;
-    static QStack<QProcess*> procs;
-    static QStack<QString> wafFiles;
-    static qint64 startTime = 0;
-    udpScanner->setSilentMode(ui->checkBox->isChecked());
-    if(ui->checkBox->isChecked()) {
-        ui->checkBox->setToolTip("режим прослушивания");
-        ui->checkBox->setText("РЕЖИМ ПРОСЛУШИВАНИЯ");
-        manager->insertMessage("РЕЖИМ ПРОСЛУШИВАНИЯ","сообщение");
-    }
-    else {
-        ui->checkBox->setToolTip("режим передачи голоса");
-        ui->checkBox->setText("РЕЖИМ ВЕЩАНИЯ");
-        manager->insertMessage("РЕЖИМ ВЕЩАНИЯ","сообщение");
-    }
-    if(dispRecorder) {
-        dispRecorder->stop();
-        delete dispRecorder;
-        QString inpName = fName;
-        QString outName = fName;
-        outName.replace("wav","mp3");
-        while(QFile::exists(outName)) {
-            outName.remove(".mp3");
-            outName+="_again.mp3";
-        }
-        QProcess *process = new QProcess;
-        QDir dir(QCoreApplication::applicationDirPath());
-        process->setProgram(dir.absolutePath()+"/utils/ffmpeg.exe");
-        process->setArguments(QStringList() << "-loglevel" << "fatal" << "-i" << inpName << "-codec:a" << "libmp3lame" << "-qscale:a" << "5" << outName);
-        process->start();
-        procs.append(process);
-        wafFiles.append(inpName);
-
-        QTimer::singleShot(10000, this, [=](){if(!procs.isEmpty()) {QProcess* pr = procs.pop();pr->kill();delete pr;}
-            if(!wafFiles.isEmpty()){QString file = wafFiles.pop();if(QFile::exists(file)) QFile::remove(file);}});
-
-        /*connect(process, static_cast<void(QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished),
-               [=](int , QProcess::ExitStatus ){ process->deleteLater(); QFile::remove(inpName);});*/
-
-        dispRecorder = nullptr;
-    }
-    if(buttonCmd == ButtonState::STOP) {
-        if(ui->checkBox->isChecked()) {
-
-        }else {
-            dispRecorder = new QAudioRecorder;
-            audioSettings.setCodec("audio/pcm");
-            audioSettings.setChannelCount(1);
-            audioSettings.setBitRate(128*1024);
-            audioSettings.setSampleRate(8000);
-            audioSettings.setEncodingMode(QMultimedia::AverageBitRateEncoding);
-
-            dispRecorder->setAudioInput(ui->comboBoxInput->currentText());
-            dispRecorder->setEncodingSettings(audioSettings);
-            dispRecorder->setContainerFormat("wav");
-            fName = QCoreApplication::applicationDirPath() + "/audio_records/disp";
-            fName+= QDateTime::currentDateTime().toString("_dd_MM_yyyy_hh_mm_ss") + ".wav";
-            while(QFile::exists(fName)) {fName.remove(".wav");fName+="_again.wav";}
-            QUrl url = QUrl::fromLocalFile(fName);
-            dispRecorder->setOutputLocation(url);
-            dispRecorder->record();
-            startTime = QDateTime::currentMSecsSinceEpoch();
-            QTimer::singleShot(300000, this, [=](){
-                qint64 t = QDateTime::currentMSecsSinceEpoch();
-                if(t-startTime>=295000) {
-                    on_checkBox_clicked();
-                }
-            });
-        }
-    }
 }
 
 void MainWindow::on_pushButtonCloseTree_clicked()
@@ -897,7 +850,7 @@ void MainWindow::on_comboBoxGroups_currentIndexChanged(int index)
 void MainWindow::on_checkBoxAlarm_clicked(bool checked)
 {
     if(checked) {
-        if(alarmFlag) sound->play();
+        if(alarmFlag && (!ui->checkBoxSound->isChecked())) sound->play();
     }else {
         sound->stop();
     }
@@ -914,3 +867,40 @@ void MainWindow::on_radioButtonGroup_clicked()
 
     //on_comboBoxGroups_currentIndexChanged(ui->comboBoxGroups->currentIndex());
 }
+
+void MainWindow::on_pushButtonMicrophone_pressed()
+{
+    udpScanner->setSilentMode(false);
+    ui->pushButtonMicrophone->setIcon(QIcon(":/images/mic_on.png"));
+    manager->insertMessage("РЕЖИМ РАЗГОВОРА","сообщение");
+    bool runFlag = false;
+    if(buttonCmd == ButtonState::STOP) runFlag = true;
+    recorder->runFlag = runFlag;
+    recorder->stopRecordCmd = false;
+    recorder->stopRecord();
+    recorder->setAudioInputName(ui->comboBoxInput->currentText());
+    recorder->newRecord();
+}
+
+void MainWindow::on_pushButtonMicrophone_released()
+{
+    bool runFlag = false;
+    if(buttonCmd == ButtonState::STOP) runFlag = true;
+    recorder->runFlag = runFlag;
+    recorder->stopRecordCmd = true;
+    recorder->stopRecord();
+    udpScanner->setSilentMode(true);
+    ui->pushButtonMicrophone->setIcon(QIcon(":/images/mic_off.png"));
+    manager->insertMessage("РЕЖИМ ПРОСЛУШИВАНИЯ","сообщение");
+}
+
+void MainWindow::on_checkBoxSound_clicked()
+{
+    if(ui->checkBoxSound->isChecked()) {
+        m_qaudioOutput->setVolume(0);sound->stop();
+    }else {
+        m_qaudioOutput->setVolume(1);
+        if(alarmFlag && (!ui->checkBoxSound->isChecked()) && ui->checkBoxAlarm->isChecked()) sound->play();
+    }
+}
+

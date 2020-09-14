@@ -94,6 +94,7 @@ SOURCES += \
 #        speex-1.2.0/libspeex/window.c \
     audioinputdevice.cpp \
     checksum.cpp \
+    mp3recorder.cpp \
     point.cpp \
     sqldriver.cpp \
     sqlmanager.cpp \
@@ -289,6 +290,7 @@ HEADERS += \
         mainwindow.h \
     audioinputdevice.h \
     checksum.h \
+    mp3recorder.h \
     point.h \
     sqldriver.h \
     sqlmanager.h \

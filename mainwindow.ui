@@ -160,7 +160,7 @@
                   <x>0</x>
                   <y>0</y>
                   <width>630</width>
-                  <height>257</height>
+                  <height>256</height>
                  </rect>
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_2"/>
@@ -511,21 +511,48 @@
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="checkBox">
+       <widget class="QPushButton" name="pushButtonMicrophone">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
         <property name="layoutDirection">
          <enum>Qt::RightToLeft</enum>
         </property>
+        <property name="text">
+         <string>Разговор</string>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>40</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="autoDefault">
+         <bool>false</bool>
+        </property>
+        <property name="default">
+         <bool>false</bool>
+        </property>
+        <property name="flat">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="checkBoxSound">
         <property name="styleSheet">
-         <string notr="true">QCheckBox::indicator {width: 64px; height: 64px; } QCheckBox::indicator:unchecked { image: url(:/speak.png); } QCheckBox::indicator:checked { image: url(:/listen.png); }</string>
+         <string notr="true">QCheckBox::indicator {width: 64px; height: 64px; } QCheckBox::indicator:unchecked { image: url(:/images/sound_on.png); } QCheckBox::indicator:checked { image: url(:/images/sound_off.png); }</string>
         </property>
         <property name="text">
-         <string>РЕЖИМ ПРОСЛУШИВАНИЯ</string>
+         <string/>
         </property>
        </widget>
       </item>

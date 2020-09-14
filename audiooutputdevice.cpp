@@ -97,7 +97,7 @@ qint64 AudioOutputDevice::readData(char *data, qint64 maxlen)
                 outName+="_again.mp3";
             }
             QProcess *process = new QProcess;
-            QDir dir(QCoreApplication::applicationDirPath());;
+            QDir dir(QCoreApplication::applicationDirPath());
             process->setProgram(dir.absolutePath()+"/utils/ffmpeg.exe");
             process->setArguments(QStringList() << "-loglevel" << "fatal" << "-f" << "s16le" << "-ar" << "8k" << "-ac" << "1" << "-i" << inpName <<
                                   "-filter:a" << "volume=2.0" << "-codec:a" << "libmp3lame" << "-qscale:a" << "5" << outName);

@@ -12,6 +12,12 @@
 #include "sqlmanager.h"
 #include "audiotree.h"
 #include <QSound>
+#include <QProcess>
+#include <QFile>
+#include <QDir>
+#include <QCoreApplication>
+#include <QTimer>
+#include "mp3recorder.h"
 
 namespace Ui {
 class MainWindow;
@@ -20,6 +26,8 @@ class MainWindow;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
+
+
 
     enum class ButtonState { START, STOP };
 
@@ -37,7 +45,6 @@ class MainWindow : public QMainWindow
     QScopedPointer<QAudioOutput> m_qaudioOutput;
 
     UDPController *udpScanner;
-    QAudioRecorder *dispRecorder;
     QAudioEncoderSettings audioSettings;
 
     QDate fromDate;
@@ -72,9 +79,8 @@ class MainWindow : public QMainWindow
     int linkPoint=0;
 
     SQLManager *manager;
-
+    MP3Recorder *recorder;
     QStringList readConf();
-
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
@@ -95,8 +101,6 @@ private slots:
     void sqlError(const QString &message);
 
 void radioButton_toggled(bool checked);
-
-void on_checkBox_clicked();
 
 void on_pushButtonCloseTree_clicked();
 
@@ -122,6 +126,12 @@ void on_comboBoxGroups_currentIndexChanged(int index);
 void on_checkBoxAlarm_clicked(bool checked);
 
 void on_radioButtonGroup_clicked();
+
+void on_pushButtonMicrophone_pressed();
+
+void on_pushButtonMicrophone_released();
+
+void on_checkBoxSound_clicked();
 
 private:
     Ui::MainWindow *ui;

@@ -7,5 +7,9 @@
         <file>speak.png</file>
         <file>images/volume.png</file>
         <file>sounds/alarm.wav</file>
+        <file>images/mic_off.png</file>
+        <file>images/mic_on.png</file>
+        <file>images/sound_off.png</file>
+        <file>images/sound_on.png</file>
     </qresource>
 </RCC>

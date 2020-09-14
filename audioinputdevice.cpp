@@ -27,8 +27,8 @@ AudioInputDevice::AudioInputDevice(const QAudioFormat &format,UDPController *sca
             break;
     }
     int error;
-    //enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_VOIP, &error);
-    enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_RESTRICTED_LOWDELAY, &error);
+    enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_VOIP, &error);
+    //enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_RESTRICTED_LOWDELAY, &error);
     //enc = opus_encoder_create(8000, 1, OPUS_APPLICATION_AUDIO, &error);
     //opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_NARROWBAND));
     opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(4));

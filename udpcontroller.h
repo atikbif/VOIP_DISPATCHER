@@ -21,7 +21,7 @@ public:
     void setSilentMode(bool value) {worker->setSilentMode(value);}
     void checkAudio();
     void setIP(const QString &ip) {worker->setIP(ip);}
-    void setVolume(int group,int point, int value);
+    void setVolume(int group,int point, int value, bool allPoints = false);
 
 signals:
     void init();

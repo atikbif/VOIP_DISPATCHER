@@ -20,6 +20,7 @@ class UDPWorker : public QObject
     int volumeGroup = 0;
     int volumePoint = 0;
     int volumeValue = 0;
+    bool volumeAll = false;
     QByteArray packet;
     static const quint8 call_wav[];
     int call_offset=0;
@@ -69,7 +70,7 @@ public:
     void setSilentMode(bool value) {silent=value;}
     void setIP(const QString &value) {ip=value;}
     void checkAudio();
-    void setVolume(int group,int point, int value);
+    void setVolume(int group,int point, int value, bool allPoints = false);
 
 signals:
   void linkStateChanged(bool value);

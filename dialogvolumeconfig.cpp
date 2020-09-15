@@ -49,12 +49,26 @@ int DialogVolumeConfig::getCurrentVolume() const
     return -1;
 }
 
+bool DialogVolumeConfig::isAllPointsActive() const
+{
+    if(ui->comboBoxPoint->currentText()==allPointsText) return true;
+    else return false;
+}
+
+int DialogVolumeConfig::getCurrentPointCnt() const
+{
+    int cnt = ui->comboBoxPoint->count();
+    if(cnt>0) cnt--;
+    return cnt;
+}
+
 void DialogVolumeConfig::on_comboBoxGroup_currentIndexChanged(int index)
 {
     if(index>=0 && index<points.size()) {
         ui->comboBoxPoint->clear();
         ui->comboBoxPoint->addItems(points.at(index));
     }
+    ui->comboBoxPoint->addItem(allPointsText);
 }
 
 

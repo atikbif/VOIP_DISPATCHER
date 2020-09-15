@@ -306,9 +306,13 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
             }
             auto res = dialog->exec();
             if(res==QDialog::Accepted) {
-                //qDebug() << dialog->getCurrentGroup() << dialog->getCurrentPoint() << dialog->getCurrentVolume();
                 if(udpScanner && dialog->getCurrentVolume()>=0) {
-                    udpScanner->setVolume(dialog->getCurrentGroup()+1,dialog->getCurrentPoint()+1,dialog->getCurrentVolume());
+                    if(!dialog->isAllPointsActive()) {
+                        udpScanner->setVolume(dialog->getCurrentGroup()+1,dialog->getCurrentPoint()+1,dialog->getCurrentVolume());
+                    }else {
+                        int cnt = dialog->getCurrentPointCnt();
+                        udpScanner->setVolume(dialog->getCurrentGroup()+1,cnt,dialog->getCurrentVolume(),true);
+                    }
                 }
             }
             delete dialog;

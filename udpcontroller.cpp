@@ -49,7 +49,7 @@ void UDPController::checkAudio()
     worker->checkAudio();
 }
 
-void UDPController::setVolume(int group, int point, int value)
+void UDPController::setVolume(int group, int point, int value, bool allPoints)
 {
-    worker->setVolume(group, point, value);
+    worker->setVolume(group, point, value, allPoints);
 }

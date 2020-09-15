@@ -600,6 +600,9 @@ void SQLDriver::addGateAlarm(const QString &ip_addr, quint8 gate_num, const QStr
     query.bindValue(":gate", gate_num);
     query.bindValue(":ip", ip_addr);
     query.exec();
+
+    QString journMessage = QString("группа ") + QString::number(gate_num) + "   " + ip_addr + " " + message;
+    insertMessage(journMessage, type);
 }
 
 void SQLDriver::work()

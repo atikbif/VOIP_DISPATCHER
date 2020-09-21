@@ -7,17 +7,13 @@
 #include <QScopedPointer>
 #include <udpcontroller.h>
 #include <QRadioButton>
-#include <QTimer>
-#include <QAudioRecorder>
 #include "sqlmanager.h"
 #include "audiotree.h"
 #include <QSound>
-#include <QProcess>
-#include <QFile>
-#include <QDir>
-#include <QCoreApplication>
 #include <QTimer>
 #include "mp3recorder.h"
+#include "projectconfig.h"
+#include <memory>
 
 namespace Ui {
 class MainWindow;
@@ -50,12 +46,14 @@ class MainWindow : public QMainWindow
     QDate fromDate;
     QDate toDate;
 
+    std::unique_ptr<ProjectConfig> prConfig;
+
     qint64 alarmStartTime;
     bool alarmFlag = false;
 
     QAudioDeviceInfo getInpDevice(const QString &name);
     QAudioDeviceInfo getOutDevice(const QString &name);
-    void setTimerInterval(int value);
+    void setTimerInterval(int value);   // периодическая автоматическая проверка динамиков
 
 
 
@@ -80,7 +78,6 @@ class MainWindow : public QMainWindow
 
     SQLManager *manager;
     MP3Recorder *recorder;
-    QStringList readConf();
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
@@ -101,36 +98,20 @@ private slots:
     void sqlError(const QString &message);
 
 void radioButton_toggled(bool checked);
-
 void on_pushButtonCloseTree_clicked();
-
 void on_pushButtonOpenTree_clicked();
-
 void on_pushButtonCheckAudio_clicked();
-
 void on_pushButtonJournal_clicked();
-
 void on_pushButtonEndTime_clicked();
-
 void on_pushButtonStartTime_clicked();
-
 void on_tabWidgetArchive_currentChanged(int index);
-
 void on_radioButtonPoint_clicked();
-
 void on_radioButtonAllPoints_clicked();
-
 void on_comboBoxGroups_currentIndexChanged(int index);
-
-
 void on_checkBoxAlarm_clicked(bool checked);
-
 void on_radioButtonGroup_clicked();
-
 void on_pushButtonMicrophone_pressed();
-
 void on_pushButtonMicrophone_released();
-
 void on_checkBoxSound_clicked();
 
 private:

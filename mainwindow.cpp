@@ -13,7 +13,6 @@
 #include <QStringList>
 #include <QStyle>
 #include "dialogvolumeconfig.h"
-#include "mp3recorder.h"
 
 QAudioDeviceInfo MainWindow::getInpDevice(const QString &name)
 {
@@ -49,39 +48,22 @@ void MainWindow::updatePointsList()
 {
   QVBoxLayout *layout = dynamic_cast<QVBoxLayout *>(ui->scrollArea->widget()->layout());
   if (layout) {
-    /*int cur_id = 0;
-    QLayoutItem *item;
-    while ((item = layout->takeAt(0)) != nullptr) {
-      QRadioButton *rb = dynamic_cast<QRadioButton*>(item->widget());
-      if(rb) {
-        if(rb->isChecked()) cur_id = rb->property("id").toInt();
-      }
-      delete item->widget();
-      delete item;
-    }
-    QRadioButton *rb = new QRadioButton("ШИРОКОВЕЩАТЕЛЬНЫЙ");
-    rb->setChecked(true);
-    connect(rb, &QRadioButton::toggled, this, &MainWindow::radioButton_toggled);
-    rb->setProperty("id", 0xFF);
-    layout->addWidget(rb);*/
-
     ui->treeWidget->clear();
-    tree = new AudioTree(ui->treeWidget);
+    tree = new AudioTree(ui->treeWidget, prConfig.get());
     tree->createTree();
-
     layout->addStretch(1);
   }
   ui->treeWidget->expandAll();
   ui->treeWidget->resizeColumnToContents(0);
   ui->treeWidget->collapseAll();
-  QStringList conf = readConf();
-  ip1 = conf.at(0).toInt();
-  ip2 = conf.at(1).toInt();
-  ip3 = conf.at(2).toInt();
-  ip4 = conf.at(3).toInt();
-  int audio_tmr = conf.at(4).toInt();
+  prConfig->readConfig();
+  ip1 = prConfig->ip1.toInt();
+  ip2 = prConfig->ip2.toInt();
+  ip3 = prConfig->ip3.toInt();
+  ip4 = prConfig->ip4.toInt();
+  int audio_tmr = prConfig->tmr.toInt();
+  int grCnt = static_cast<int>(prConfig->gates.size());
   setTimerInterval(60*audio_tmr);
-  int grCnt = conf.at(5).toInt();
   ui->comboBoxGroups->clear();
   for(int i=0;i<grCnt;i++) {
       auto grName = tree->getGroupValue(i,"name");
@@ -89,60 +71,6 @@ void MainWindow::updatePointsList()
           ui->comboBoxGroups->addItem(std::any_cast<QString>(grName.value()));
       }
   }
-}
-
-QStringList MainWindow::readConf()
-{
-    QString ip1,ip2,ip3,ip4,tmr;
-    QStringList res;
-    QStringList p_cnt;
-    QString gate_cnt = "0";
-    QFile confFile("conf.json");
-    if(confFile.open(QIODevice::ReadOnly)) {
-        QByteArray saveData = confFile.readAll();
-        QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
-        QJsonObject loadOb = loadDoc.object();
-        if(loadOb.contains("ip1")) {
-          ip1 = loadOb["ip1"].toString();
-        }
-        if(loadOb.contains("ip2")) {
-          ip2 = loadOb["ip2"].toString();
-        }
-        if(loadOb.contains("ip3")) {
-          ip3 = loadOb["ip3"].toString();
-        }
-        if(loadOb.contains("ip4")) {
-          ip4 = loadOb["ip4"].toString();
-        }
-        if(loadOb.contains("audio tmr")) {
-          tmr = loadOb["audio tmr"].toString();
-        }
-        if(loadOb.contains("gate cnt")) {
-          gate_cnt = loadOb["gate cnt"].toString();
-          int v = gate_cnt.toInt();
-          if(v>0 && v<=32) {
-              if(loadOb.contains("gates") && loadOb["gates"].isArray()) {
-                QJsonArray jsGates = loadOb["gates"].toArray();
-                int gate_length = jsGates.size();
-                if(v>gate_length) v=gate_length;
-                gate_cnt = QString::number(v);
-                for (int i=0; i<v; ++i) {
-                    QJsonObject gateOb = jsGates[i].toObject();
-                    if(gateOb.contains("cnt")) {
-                        int cnt = gateOb["cnt"].toInt();
-                        p_cnt.append(QString::number(cnt));
-                    }
-                }
-              }
-          }
-        }
-    }
-    res << ip1 << ip2 << ip3 << ip4 << tmr;
-    if(gate_cnt.toInt()==p_cnt.length()) {
-        res << gate_cnt;
-        res << p_cnt;
-    }else res << "0";
-    return res;
 }
 
 void MainWindow::updateAlarmList(const QStringList &list)
@@ -170,6 +98,9 @@ void MainWindow::updateAlarmList(const QStringList &list)
 }
 
 MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow) {
+
+  prConfig = std::make_unique<ProjectConfig>("conf.json");
+
   QTextCodec *utfcodec = QTextCodec::codecForName("UTF-8");
   QTextCodec::setCodecForLocale(utfcodec);
   ui->setupUi(this);
@@ -194,12 +125,10 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
   manager->initDB();
   manager->insertMessage("Запуск приложения","сообщение");
 
-  QStringList conf = readConf();
-  int gate_cnt = conf.at(5).toInt();
-  if(conf.length()>=6+gate_cnt) {
-      for(int i=0;i<gate_cnt;i++) {
-          manager->setPointCnt(static_cast<quint8>(i),static_cast<quint8>(conf.at(6+i).toInt()));
-      }
+  prConfig->readConfig();
+  int gate_cnt = static_cast<int>(prConfig->gates.size());
+  for(int i=0;i<gate_cnt;i++) {
+      manager->setPointCnt(static_cast<quint8>(i),static_cast<quint8>(prConfig->gates.at(static_cast<std::size_t>(i)).points.size()));
   }
 
     updatePointsList();
@@ -279,28 +208,27 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
     on_pushButtonMicrophone_released();
 
 
-    ui->toolBar->addAction(QIcon(":/images/config.png"),"Настройка",[this](){QDialog *dialog = new DialogConfig();auto res = dialog->exec();if(res==QDialog::Accepted) updatePointsList();delete dialog;});
-    ui->toolBar->addAction(QIcon(":/images/volume.png"),"Громкость точек",[gate_cnt,conf,this](){
+    ui->toolBar->addAction(QIcon(":/images/config.png"),"Настройка",[this](){QDialog *dialog = new DialogConfig(prConfig.get());auto res = dialog->exec();if(res==QDialog::Accepted) updatePointsList();delete dialog;});
+    ui->toolBar->addAction(QIcon(":/images/volume.png"),"Громкость точек",[this](){
         if (buttonCmd == ButtonState::STOP) {
             DialogVolumeConfig *dialog = new DialogVolumeConfig();
             if(tree!=nullptr) {
                 QStringList groups;
-                for(int i=0;i<gate_cnt;i++) {
+                int gateCnt = static_cast<int>(prConfig->gates.size());
+                for(int i=0;i<gateCnt;i++) {
                     auto grName = tree->getGroupValue(i,"name");
                     if(grName) groups.append(std::any_cast<QString>(grName.value()));
-                    if(conf.length()>=6+gate_cnt) {
-                        quint8 point_cnt = static_cast<quint8>(conf.at(6+i).toInt());
-                        QStringList points;
-                        QStringList volumes;
-                        for(int j=0;j<point_cnt;j++) {
-                            auto pointName = tree->getPointValue(i,j,"name");
-                            if(pointName) points.append(std::any_cast<QString>(pointName.value()));
-                            auto volume = tree->getPointValue(i,j,"volume");
-                            if(volume) volumes.append(std::any_cast<QString>(volume.value()));
-                        }
-                        dialog->addPoints(points);
-                        dialog->addVolume(volumes);
+                    quint8 point_cnt = static_cast<quint8>(prConfig->gates.at(static_cast<std::size_t>(i)).points.size());
+                    QStringList points;
+                    QStringList volumes;
+                    for(int j=0;j<point_cnt;j++) {
+                        auto pointName = tree->getPointValue(i,j,"name");
+                        if(pointName) points.append(std::any_cast<QString>(pointName.value()));
+                        auto volume = tree->getPointValue(i,j,"volume");
+                        if(volume) volumes.append(std::any_cast<QString>(volume.value()));
                     }
+                    dialog->addPoints(points);
+                    dialog->addVolume(volumes);
                 }
                 dialog->addGroups(groups);
             }
@@ -827,9 +755,9 @@ void MainWindow::on_comboBoxGroups_currentIndexChanged(int index)
             linkPoint = 1;
             if(udpScanner) udpScanner->setToID(static_cast<quint8>(linkGroup),static_cast<quint8>(linkPoint));
         }
-        QStringList conf = readConf();
-        if(index>=0 && conf.size()>6+index) {
-            int pointCnt = conf.at(6+index).toInt();
+        prConfig->readConfig();
+        if(index>=0) {
+            int pointCnt = static_cast<int>(prConfig->gates.at(static_cast<std::size_t>(index)).points.size());
             for(int i=0;i<pointCnt;i++) {
                 auto pointName = tree->getPointValue(ui->comboBoxGroups->currentIndex(),i,"name");
                 if(pointName) {

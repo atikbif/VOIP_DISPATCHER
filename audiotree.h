@@ -8,14 +8,16 @@
 #include <vector>
 #include "group.h"
 #include "point.h"
+#include "projectconfig.h"
 
 
 class AudioTree
 {
     std::vector<Group> groups;
     QTreeWidget *tree=nullptr;
+    ProjectConfig *prConf;
 public:
-    explicit AudioTree(QTreeWidget *tree);
+    explicit AudioTree(QTreeWidget *tree, ProjectConfig *prConf);
     void setPointValue(int groupNum, int pointNum, const QString &param, std::any value);
     void setGroupValue(int groupNum, const QString &param, std::any value);
     void setPointToDefault(int groupNum, int pointNum);

@@ -96,6 +96,7 @@ SOURCES += \
     checksum.cpp \
     mp3recorder.cpp \
     point.cpp \
+    projectconfig.cpp \
     sqldriver.cpp \
     sqlmanager.cpp \
     udpworker.cpp \
@@ -292,6 +293,7 @@ HEADERS += \
     checksum.h \
     mp3recorder.h \
     point.h \
+    projectconfig.h \
     sqldriver.h \
     sqlmanager.h \
     udpworker.h \

@@ -6,7 +6,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 
-AudioTree::AudioTree(QTreeWidget *tree):tree(tree)
+AudioTree::AudioTree(QTreeWidget *tree, ProjectConfig *prConf):tree(tree), prConf(prConf)
 {
 
 }
@@ -69,50 +69,62 @@ int AudioTree::pointCount(int groupNum)
 void AudioTree::createTree()
 {
     if(tree) {
-
-        QFile confFile("conf.json");
-        if(confFile.open(QIODevice::ReadOnly)) {
-            QByteArray saveData = confFile.readAll();
-            QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
-            QJsonObject loadOb = loadDoc.object();
-            int groupCnt = 0;
-            if(loadOb.contains("gate cnt")) {
-              QString cnt = loadOb["gate cnt"].toString();
-              groupCnt = cnt.toInt();
+        prConf->readConfig();
+        int groupCnt = static_cast<int>(prConf->gates.size());
+        for (int i = 0; i < groupCnt; ++i) {
+            QString gr_name = prConf->gates.at(i).name;
+            QTreeWidgetItem *gr = new QTreeWidgetItem();
+            tree->addTopLevelItem(gr);
+            Group g(gr,gr_name);
+            int pCnt = static_cast<int>(prConf->gates.at(i).points.size());
+            for(int j=0;j<pCnt;j++) {
+                g.addNewPoint(prConf->gates.at(i).points.at(j));
             }
-            if(loadOb.contains("gates") && loadOb["gates"].isArray()) {
-              QJsonArray jsGates = loadOb["gates"].toArray();
-              int gate_length = jsGates.size();
-              if(groupCnt>gate_length) groupCnt=gate_length;
+            groups.push_back(g);
+        }
+//        QFile confFile("conf.json");
+//        if(confFile.open(QIODevice::ReadOnly)) {
+//            QByteArray saveData = confFile.readAll();
+//            QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
+//            QJsonObject loadOb = loadDoc.object();
+//            int groupCnt = 0;
+//            if(loadOb.contains("gate cnt")) {
+//              QString cnt = loadOb["gate cnt"].toString();
+//              groupCnt = cnt.toInt();
+//            }
+//            if(loadOb.contains("gates") && loadOb["gates"].isArray()) {
+//              QJsonArray jsGates = loadOb["gates"].toArray();
+//              int gate_length = jsGates.size();
+//              if(groupCnt>gate_length) groupCnt=gate_length;
 
-              for (int i = 0; i < groupCnt; ++i) {
-                QJsonObject gateOb = jsGates[i].toObject();
-                if(gateOb.contains("name")) {
-                  QString gr_name = gateOb["name"].toString();
-                  QTreeWidgetItem *gr = new QTreeWidgetItem();
-                  tree->addTopLevelItem(gr);
-                  Group g(gr,gr_name);
-                  int pointCnt = 0;
-                  if(gateOb.contains("cnt")) {
-                      pointCnt = gateOb["cnt"].toInt();
-                  }
-                  if(gateOb.contains("points")&& gateOb["points"].isArray()) {
-                      QJsonArray jsPoints = gateOb["points"].toArray();
-                      int points_length = jsPoints.size();
-                      if(pointCnt>points_length) pointCnt=points_length;
-                      for(int j=0;j<pointCnt;j++) {
-                          QJsonObject pointOb = jsPoints[j].toObject();
-                          if(pointOb.contains("name")) {
-                              QString point_name = pointOb["name"].toString();
-                              g.addNewPoint(point_name);
-                          }
-                      }
-                  }
-                  groups.push_back(g);
-                }
-              }
-          }
-      }
+//              for (int i = 0; i < groupCnt; ++i) {
+//                QJsonObject gateOb = jsGates[i].toObject();
+//                if(gateOb.contains("name")) {
+//                  QString gr_name = gateOb["name"].toString();
+//                  QTreeWidgetItem *gr = new QTreeWidgetItem();
+//                  tree->addTopLevelItem(gr);
+//                  Group g(gr,gr_name);
+//                  int pointCnt = 0;
+//                  if(gateOb.contains("cnt")) {
+//                      pointCnt = gateOb["cnt"].toInt();
+//                  }
+//                  if(gateOb.contains("points")&& gateOb["points"].isArray()) {
+//                      QJsonArray jsPoints = gateOb["points"].toArray();
+//                      int points_length = jsPoints.size();
+//                      if(pointCnt>points_length) pointCnt=points_length;
+//                      for(int j=0;j<pointCnt;j++) {
+//                          QJsonObject pointOb = jsPoints[j].toObject();
+//                          if(pointOb.contains("name")) {
+//                              QString point_name = pointOb["name"].toString();
+//                              g.addNewPoint(point_name);
+//                          }
+//                      }
+//                  }
+//                  groups.push_back(g);
+//                }
+//              }
+//          }
+//      }
     }
 }
 

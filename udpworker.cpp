@@ -296,7 +296,6 @@ void UDPWorker::scan()
         bool volumeAllState = volumeAll;
         mutex.unlock();
         if(workFlagState) {
-            qDebug() << udp.state();
             if(udp.state()==QUdpSocket::UnconnectedState) {
                 udp.connectToHost(QHostAddress(ip),12145);
                 //qDebug() << "TRY CONNECT" << ip;

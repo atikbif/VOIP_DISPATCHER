@@ -13,6 +13,7 @@
 #include <QStringList>
 #include <QStyle>
 #include "dialogvolumeconfig.h"
+#include "dialoginputsconfig.h"
 #include "pointdata.h"
 #include "groupdata.h"
 
@@ -250,6 +251,44 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
             }
             delete dialog;
         }else QMessageBox::information(this,"Настройка громкости точки","Необходимо запустить опрос");
+    });
+
+    ui->toolBar->addAction(QIcon(":/images/contact.png"),"Фильтр входов точек",[this](){
+        if (buttonCmd == ButtonState::STOP) {
+            DialogInputsConfig *dialog = new DialogInputsConfig();
+            if(tree!=nullptr) {
+                int gateCnt = static_cast<int>(prConfig->gates.size());
+                for(int i=0;i<gateCnt;i++) {
+                    GateConf conf;
+                    auto grName = tree->getGroupValue(i,"name");
+                    if(grName) conf.name = std::any_cast<QString>(grName.value());
+                    quint8 point_cnt = static_cast<quint8>(prConfig->gates.at(static_cast<std::size_t>(i)).points.size());
+                    for(int j=0;j<point_cnt;j++) {
+                        PointConf pConf;
+                        auto pointName = tree->getPointValue(i,j,"name");
+                        if(pointName) pConf.name = std::any_cast<QString>(pointName.value());
+                        auto inp1 = tree->getPointValue(i,j,"di1");
+                        auto inp2 = tree->getPointValue(i,j,"di2");
+                        auto filter1 = tree->getPointValue(i,j,"di1_filter");
+                        auto filter2 = tree->getPointValue(i,j,"di2_filter");
+                        auto inp1Value = std::any_cast<Input>(inp1.value());
+                        if(inp1Value!=Input::UNUSED) pConf.inp1En=true;else pConf.inp1En=false;
+                        auto inp2Value = std::any_cast<Input>(inp2.value());
+                        if(inp2Value!=Input::UNUSED) pConf.inp2En=true;else pConf.inp2En=false;
+                        auto filter1Value = std::any_cast<double>(filter1.value());
+                        pConf.in1Filter = static_cast<quint8>(filter1Value*2);
+                        auto filter2Value = std::any_cast<double>(filter2.value());
+                        pConf.in2Filter = static_cast<quint8>(filter2Value*2);
+                        conf.points.push_back(pConf);
+                    }
+                    dialog->addGateConf(conf);
+                }
+                auto res = dialog->exec();
+                if(res==QDialog::Accepted) {
+
+                }
+            }
+        }else QMessageBox::information(this,"Настройка входов точки","Необходимо запустить опрос");
     });
 
     QFont font = QFont ("Courier");

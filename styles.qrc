@@ -11,5 +11,6 @@
         <file>images/mic_on.png</file>
         <file>images/sound_off.png</file>
         <file>images/sound_on.png</file>
+        <file>images/contact.png</file>
     </qresource>
 </RCC>

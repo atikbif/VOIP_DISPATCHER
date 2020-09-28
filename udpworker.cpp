@@ -162,7 +162,7 @@ void UDPWorker::readState(QUdpSocket &udp)
         }
         if(cnt>0) {
             //if(cnt>=100 && (quint8)receiveBuf[2]==0xD0) emit updateState(QByteArray::fromRawData(&receiveBuf[3],cnt-5));
-            if((quint8)receiveBuf[2]==0x04  && cnt==1008)
+            if((quint8)receiveBuf[2]==0x04  && cnt==100*9+8)
             {
                 QByteArray state;
                 state.append(QByteArray::fromRawData(&receiveBuf[3],cnt-5));

@@ -13,6 +13,8 @@
 #include <QStringList>
 #include <QStyle>
 #include "dialogvolumeconfig.h"
+#include "pointdata.h"
+#include "groupdata.h"
 
 QAudioDeviceInfo MainWindow::getInpDevice(const QString &name)
 {
@@ -49,6 +51,7 @@ void MainWindow::updatePointsList()
   QVBoxLayout *layout = dynamic_cast<QVBoxLayout *>(ui->scrollArea->widget()->layout());
   if (layout) {
     ui->treeWidget->clear();
+    if(tree!=nullptr) delete tree;
     tree = new AudioTree(ui->treeWidget, prConfig.get());
     tree->createTree();
     layout->addStretch(1);
@@ -98,6 +101,8 @@ void MainWindow::updateAlarmList(const QStringList &list)
 }
 
 MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow) {
+
+  tree = nullptr;
 
   prConfig = std::make_unique<ProjectConfig>("conf.json");
 
@@ -414,102 +419,124 @@ void MainWindow::updateState(const QByteArray state)
 
     quint8 req_num = static_cast<quint8>(state.at(0));
     quint16 used_point_cnt = static_cast<quint16>((static_cast<quint16>(static_cast<quint8>(state.at(1)))<<8) | static_cast<quint8>(state.at(2)));
-    int req_points_cnt = (state.length()-3)/8;
+    int req_points_cnt = (state.length()-3)/9;
     if(used_point_cnt>req_points_cnt) return;//used_point_cnt=static_cast<quint16>(req_points_cnt);
     if(req_num==0) {
         alarmPointList.clear();
+        int pointDataSize = PointData::getRawDataSize();
         for(int i=0;i<used_point_cnt;i++) {
-            quint8 grNum = static_cast<quint8>(state.at(3+i*8));
-            quint8 pointNum = static_cast<quint8>(state.at(4+i*8));
+            PointData p(state.mid(3+i*pointDataSize,pointDataSize));
+            quint8 grNum = p.getGroupNum();
+            quint8 pointNum = p.getPointNum();
             if(grNum && pointNum) {
-                quint8 battery = static_cast<quint8>(state.at(5+i*8));
-                quint8 power = static_cast<quint8>(state.at(6+i*8));
-                tree->setPointValue(grNum-1,pointNum-1,"battery",(static_cast<double>(battery))/10);
-                tree->setPointValue(grNum-1,pointNum-1,"power",(static_cast<double>(power))/10);
-                quint8 vers = static_cast<quint8>(state.at(7+i*8));
-                quint16 bits = static_cast<quint8>(state.at(8+i*8));
-                bits = static_cast<quint16>((static_cast<quint16>(bits)<<8) | static_cast<quint8>(state.at(9+i*8)));
-                quint8 volume = static_cast<quint8>(state.at(10+i*8));
-                bool di1_state = bits & (1<<0);
-                bool di1_break = bits & (1<<1);
-                bool di1_short = bits & (1<<2);
-                bool di2_state = bits & (1<<3);
-                bool di2_break = bits & (1<<4);
-                bool di2_short = bits & (1<<5);
-                bool do1_state = bits & (1<<6);
-                bool do2_state = bits & (1<<7);
-                bool speaker_state = bits & (1<<8);
-                bool speaker_check = bits & (1<<9);
-                bool limit_switch = bits & (1<<10);
+                QString inp2TypeStr;
+                Inp2Type inp2type = p.getInput2Type();
+                if(inp2type==Inp2Type::KSL) inp2TypeStr = "КСЛ";
+                else if(inp2type==Inp2Type::FENCE) inp2TypeStr = "ПЕРЕЕЗД";
+                else if(inp2type==Inp2Type::JAMMING) inp2TypeStr = "ОГРАЖДЕНИЕ";
+                else if(inp2type==Inp2Type::CROSSING) inp2TypeStr = "ЗАШТЫБОВКА";
+
+                tree->setPointValue(grNum-1,pointNum-1,"di2_type",inp2TypeStr);
+
+                quint8 vers = p.getVersion();
                 if(vers<=200) tree->setPointValue(grNum-1,pointNum-1,"version",QString::number(vers)+QString(".0"));
                 else tree->setPointValue(grNum-1,pointNum-1,"version","Загрузчик " + QString::number(vers-200)+QString(".0"));
+                quint8 volume = p.getSoundReduction();
                 if(volume==0) tree->setPointValue(grNum-1,pointNum-1,"volume",QString("максимум"));
                 else if(volume>3) tree->setPointValue(grNum-1,pointNum-1,"volume",QString("некорректное значение") + QString::number(volume));
                 else tree->setPointValue(grNum-1,pointNum-1,"volume",QString("1/")+QString::number(pow(2,volume)));
-                if(di1_break) {
-                    tree->setPointValue(grNum-1,pointNum-1,"di1",Input::BREAK);
-                    auto grName = tree->getGroupValue(grNum-1,"name");
-                    if(grName) {
-                        QString alarmText = std::any_cast<QString>(grName.value())+" ";
-                        auto pointName = tree->getPointValue(grNum-1,pointNum-1,"name");
-                        if(pointName) {
-                            alarmText += std::any_cast<QString>(pointName.value())+": ";
-                            alarmText += "АВАРИЯ ВХОД1(КТВ) - ОБРЫВ";
-                            alarmPointList.append(alarmText);
-                        }
-                    }
-                }
-                else if(di1_short) {
-                    tree->setPointValue(grNum-1,pointNum-1,"di1",Input::SHORT);
-                    auto grName = tree->getGroupValue(grNum-1,"name");
-                    if(grName) {
-                        QString alarmText = std::any_cast<QString>(grName.value())+" ";
-                        auto pointName = tree->getPointValue(grNum-1,pointNum-1,"name");
-                        if(pointName) {
-                            alarmText += std::any_cast<QString>(pointName.value())+": ";
-                            alarmText += "АВАРИЯ ВХОД1(КТВ) - ЗАМЫКАНИЕ";
-                            alarmPointList.append(alarmText);
-                        }
-                    }
-                }
-                else if(di1_state) {tree->setPointValue(grNum-1,pointNum-1,"di1",Input::ON);}
-                else {
-                    tree->setPointValue(grNum-1,pointNum-1,"di1",Input::OFF);
-                    auto grName = tree->getGroupValue(grNum-1,"name");
-                    if(grName) {
-                        QString alarmText = std::any_cast<QString>(grName.value())+" ";
-                        auto pointName = tree->getPointValue(grNum-1,pointNum-1,"name");
-                        if(pointName) {
-                            alarmText += std::any_cast<QString>(pointName.value())+": ";
-                            alarmText += "АВАРИЯ ВХОД1(КТВ) - ВЫКЛ";
-                            alarmPointList.append(alarmText);
-                        }
-                    }
-                }
-                if(di2_break) {tree->setPointValue(grNum-1,pointNum-1,"di2",Input::BREAK);}
-                else if(di2_short) {tree->setPointValue(grNum-1,pointNum-1,"di2",Input::SHORT);}
-                else if(di2_state) {tree->setPointValue(grNum-1,pointNum-1,"di2",Input::ON);}
-                else {tree->setPointValue(grNum-1,pointNum-1,"di2",Input::OFF);}
-                tree->setPointValue(grNum-1,pointNum-1,"do1",do1_state);
-                tree->setPointValue(grNum-1,pointNum-1,"do2",do2_state);
-                tree->setPointValue(grNum-1,pointNum-1,"limit_switch",limit_switch);
-                if(speaker_check==false) {tree->setPointValue(grNum-1,pointNum-1,"speaker",Speaker::NOT_CHECKED);}
-                else {
-                    if(speaker_state) {tree->setPointValue(grNum-1,pointNum-1,"speaker",Speaker::CORRECT);}
-                    else {
-                        tree->setPointValue(grNum-1,pointNum-1,"speaker",Speaker::PROBLEM);
-                        auto grName = tree->getGroupValue(grNum-1,"name");
+
+                auto grName = tree->getGroupValue(grNum-1,"name");
+                auto pointName = tree->getPointValue(grNum-1,pointNum-1,"name");
+
+                Input di1 = p.getInput1();
+                tree->setPointValue(grNum-1,pointNum-1,"di1",di1);
+                if(di1!=Input::UNUSED) {
+                    if(di1==Input::BREAK) {
                         if(grName) {
                             QString alarmText = std::any_cast<QString>(grName.value())+" ";
-                            auto pointName = tree->getPointValue(grNum-1,pointNum-1,"name");
                             if(pointName) {
                                 alarmText += std::any_cast<QString>(pointName.value())+": ";
-                                alarmText += "АВАРИЯ НЕИСПРАВНОСТЬ ДИНАМИКОВ";
+                                alarmText += "АВАРИЯ ВХОД1(КТВ) - ОБРЫВ";
+                                alarmPointList.append(alarmText);
+                            }
+                        }
+                    }else if(di1==Input::SHORT) {
+                        if(grName) {
+                            QString alarmText = std::any_cast<QString>(grName.value())+" ";
+                            if(pointName) {
+                                alarmText += std::any_cast<QString>(pointName.value())+": ";
+                                alarmText += "АВАРИЯ ВХОД1(КТВ) - ЗАМЫКАНИЕ";
+                                alarmPointList.append(alarmText);
+                            }
+                        }
+                    }else if(di1==Input::OFF) {
+                        if(grName) {
+                            QString alarmText = std::any_cast<QString>(grName.value())+" ";
+                            if(pointName) {
+                                alarmText += std::any_cast<QString>(pointName.value())+": ";
+                                alarmText += "АВАРИЯ ВХОД1(КТВ) - ВЫКЛ";
                                 alarmPointList.append(alarmText);
                             }
                         }
                     }
                 }
+
+                Input di2 = p.getInput2();
+                tree->setPointValue(grNum-1,pointNum-1,"di2",di2);
+                if(di2!=Input::UNUSED) {
+                    if(di2==Input::BREAK) {
+                        if(grName) {
+                            QString alarmText = std::any_cast<QString>(grName.value())+" ";
+                            if(pointName) {
+                                alarmText += std::any_cast<QString>(pointName.value())+": ";
+                                alarmText += "АВАРИЯ ВХОД2(" + inp2TypeStr + ") - ОБРЫВ";
+                                alarmPointList.append(alarmText);
+                            }
+                        }
+                    }else if(di2==Input::SHORT) {
+                        if(grName) {
+                            QString alarmText = std::any_cast<QString>(grName.value())+" ";
+                            if(pointName) {
+                                alarmText += std::any_cast<QString>(pointName.value())+": ";
+                                alarmText += "АВАРИЯ ВХОД2(" + inp2TypeStr + ") - ЗАМЫКАНИЕ";
+                                alarmPointList.append(alarmText);
+                            }
+                        }
+                    }else if(di2==Input::OFF) {
+                        if(grName) {
+                            QString alarmText = std::any_cast<QString>(grName.value())+" ";
+                            if(pointName) {
+                                alarmText += std::any_cast<QString>(pointName.value())+": ";
+                                alarmText += "АВАРИЯ ВХОД2(" + inp2TypeStr + ") - ВЫКЛ";
+                                alarmPointList.append(alarmText);
+                            }
+                        }
+                    }
+                }
+
+
+                tree->setPointValue(grNum-1,pointNum-1,"do1",p.getOutput1());
+                tree->setPointValue(grNum-1,pointNum-1,"do2",p.getOutput2());
+                tree->setPointValue(grNum-1,pointNum-1,"limit_switch",p.getLastPointSwitch());
+                tree->setPointValue(grNum-1,pointNum-1,"di1_filter",p.getDI1Filter());
+                tree->setPointValue(grNum-1,pointNum-1,"di2_filter",p.getDI2Filter());
+
+                auto speaker = p.getSpeaker();
+                tree->setPointValue(grNum-1,pointNum-1,"speaker",speaker);
+                if(speaker==Speaker::PROBLEM) {
+                    if(grName) {
+                        QString alarmText = std::any_cast<QString>(grName.value())+" ";
+                        if(pointName) {
+                            alarmText += std::any_cast<QString>(pointName.value())+": ";
+                            alarmText += "АВАРИЯ НЕИСПРАВНОСТЬ ДИНАМИКОВ";
+                            alarmPointList.append(alarmText);
+                        }
+                    }
+                }
+
+                tree->setPointValue(grNum-1,pointNum-1,"power",p.getPowerVoltage());
+                tree->setPointValue(grNum-1,pointNum-1,"battery",p.getAccumulatorVoltage());
             }
         }
     }
@@ -534,14 +561,17 @@ void MainWindow::updateState(const QByteArray state)
 
 void MainWindow::updateGroupState(const QByteArray state)
 {
+    quint8 rawDataSize = GroupData::getRawGroupDataSize();
+    quint8 configGateSize = static_cast<quint8>(prConfig->gates.size());
+    int minBufSize = prConfig->maxGateQuantity * rawDataSize;
     alarmGroupList.clear();
-    if(state.length()>=32*5) {
+    if(state.length()>=minBufSize) {
         manager->insertGroupData(state);
-        for(int i=0;i<32;i++) {
-            quint8 num = static_cast<quint8>(state.at(i*5+0));
-            if(num) {
-               // qDebug()<<num;
-                quint8 cnt = static_cast<quint8>(state.at(i*5+1));
+        for(int i=0;i<configGateSize;i++) {
+            GroupData grData(state.mid(i*rawDataSize,rawDataSize));
+            quint8 grNum = grData.getGrNum();
+            if(grNum) {
+                quint8 cnt = grData.getPointsQuantity();
                 tree->setGroupValue(i,"real_point_cnt",static_cast<int>(cnt));
                 if(cnt<tree->pointCount(i)) {
                     auto grName = tree->getGroupValue(i,"name");
@@ -553,35 +583,12 @@ void MainWindow::updateGroupState(const QByteArray state)
                         tree->setPointToDefault(i,j);
                     }
                 }
-                quint16 bits = static_cast<quint8>(state.at(3+i*5));
-                bits = static_cast<quint16>((static_cast<quint8>(bits)<<8) | static_cast<quint8>(state.at(4+i*5)));
-                bool di1_state = bits & (1<<0);
-                bool di1_break = bits & (1<<1);
-                bool di1_short = bits & (1<<2);
-                bool di2_state = bits & (1<<3);
-                bool di2_break = bits & (1<<4);
-                bool di2_short = bits & (1<<5);
-                bool di3_state = bits & (1<<6);
-                bool di3_break = bits & (1<<7);
-                bool di3_short = bits & (1<<8);
-                bool do1_state = bits & (1<<9);
-                bool do2_state = bits & (1<<10);
-                bool not_actual = bits & (1<<13);
-                if(di1_break) {tree->setGroupValue(i,"di1",Input::BREAK);}
-                else if(di1_short) {tree->setGroupValue(i,"di1",Input::SHORT);}
-                else if(di1_state) {tree->setGroupValue(i,"di1",Input::ON);}
-                else {tree->setGroupValue(i,"di1",Input::OFF);}
-                if(di2_break) {tree->setGroupValue(i,"di2",Input::BREAK);}
-                else if(di2_short) {tree->setGroupValue(i,"di2",Input::SHORT);}
-                else if(di2_state) {tree->setGroupValue(i,"di2",Input::ON);}
-                else {tree->setGroupValue(i,"di2",Input::OFF);}
-                if(di3_break) {tree->setGroupValue(i,"di3",Input::BREAK);}
-                else if(di3_short) {tree->setGroupValue(i,"di3",Input::SHORT);}
-                else if(di3_state) {tree->setGroupValue(i,"di3",Input::ON);}
-                else {tree->setGroupValue(i,"di3",Input::OFF);}
-                tree->setGroupValue(i,"do1",do1_state);
-                tree->setGroupValue(i,"do2",do2_state);
-                tree->setGroupValue(i,"not_actual",not_actual);
+                tree->setGroupValue(i,"di1",grData.getInput1());
+                tree->setGroupValue(i,"di2",grData.getInput2());
+                tree->setGroupValue(i,"di3",grData.getInput3());
+                tree->setGroupValue(i,"do1",grData.getOut1());
+                tree->setGroupValue(i,"do2",grData.getOut2());
+                tree->setGroupValue(i,"not_actual",grData.getNotActual());
             }else {
                 if(tree->pointCount(i)) {
                     auto grName = tree->getGroupValue(i,"name");

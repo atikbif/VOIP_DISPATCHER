@@ -57,6 +57,7 @@ SOURCES += \
     dialogdate.cpp \
     dialogvolumeconfig.cpp \
     group.cpp \
+    groupdata.cpp \
         main.cpp \
         mainwindow.cpp \
 #        speex-1.2.0/libspeex/bits.c \
@@ -96,6 +97,7 @@ SOURCES += \
     checksum.cpp \
     mp3recorder.cpp \
     point.cpp \
+    pointdata.cpp \
     projectconfig.cpp \
     sqldriver.cpp \
     sqlmanager.cpp \
@@ -287,12 +289,15 @@ HEADERS += \
     coloredsqlquerymodel.h \
     dialogdate.h \
     dialogvolumeconfig.h \
+    enums.h \
     group.h \
+    groupdata.h \
         mainwindow.h \
     audioinputdevice.h \
     checksum.h \
     mp3recorder.h \
     point.h \
+    pointdata.h \
     projectconfig.h \
     sqldriver.h \
     sqlmanager.h \

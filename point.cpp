@@ -14,6 +14,7 @@ Point::Point(QTreeWidgetItem *item, const QString &name):name(name),item(item)
         speakerIitem = new QTreeWidgetItem(item,QStringList()<< "Динамики"<<"не известно");
         di1Item = new QTreeWidgetItem(item,QStringList()<< "Вход 1 (КТВ)"<<"не известно");
         di2Item = new QTreeWidgetItem(item,QStringList()<< "Вход 2"<<"не известно");
+        di2TypeItem = new QTreeWidgetItem(item,QStringList()<<"Тип входа"<<"не известно");
         do1Item = new QTreeWidgetItem(item,QStringList()<< "Выход 1 (разреш)"<<"не известно");
         do2Item = new QTreeWidgetItem(item,QStringList()<< "Выход 2 (предстарт)"<<"не известно");
         powerItem = new QTreeWidgetItem(item,QStringList()<< "Питание, В"<<"не известно");
@@ -21,6 +22,8 @@ Point::Point(QTreeWidgetItem *item, const QString &name):name(name),item(item)
         versionItem = new QTreeWidgetItem(item,QStringList()<< "Версия"<<"не известно");
         volumeItem = new QTreeWidgetItem(item,QStringList()<< "Громкость"<<"не известно");
         limitSwitchItem = new QTreeWidgetItem(item,QStringList()<<"Концевик"<<"не известно");
+        di1FilterItem = new QTreeWidgetItem(item,QStringList()<<"Фильтр входа 1, с"<<"не известно");
+        di2FilterItem = new QTreeWidgetItem(item,QStringList()<<"Фильтр входа 2, с"<<"не известно");
         //connect(volumeItem,&QTreeWidgetItem::)
     }
 }
@@ -38,6 +41,9 @@ std::optional<std::any> Point::getPointValue(const QString &param)
     else if(param=="version") return std::make_optional<std::any>(version);
     else if(param=="volume") return std::make_optional<std::any>(volume);
     else if(param=="limit_switch") return std::make_optional<std::any>(limit_switch);
+    else if(param=="di1_filter") return std::make_optional<std::any>(di1Filter);
+    else if(param=="di2_filter") return std::make_optional<std::any>(di2Filter);
+    else if(param=="di2_type") return std::make_optional<std::any>(di2Type);
     return std::nullopt;
 }
 
@@ -67,6 +73,9 @@ void Point::setPointValue(const QString &param, std::any value)
         } else if(param=="battery") {
             battery=std::any_cast<double>(value);
             batteryItem->setText(1,QString::number(battery));
+        }else if(param=="di2_type") {
+            di2Type=std::any_cast<QString>(value);
+            di2TypeItem->setText(1,di2Type);
         }
         else if(param=="di1") {
             di1=std::any_cast<Input>(value);
@@ -88,16 +97,36 @@ void Point::setPointValue(const QString &param, std::any value)
                         di1Item->setText(1,"КЗ");
                         di1Item->setTextColor(1, Qt::red);
                         break;
+                    case Input::UNUSED:
+                        di1Item->setText(1,"Отключен");
+                        di1Item->setTextColor(1, Qt::darkGray);
+                        break;
                 }
             }
         }else if(param=="di2") {
             di2=std::any_cast<Input>(value);
             if(di2Item) {
                 switch (di2) {
-                    case Input::ON:di2Item->setText(1,"ВКЛ");break;
-                    case Input::OFF:di2Item->setText(1,"ВЫКЛ");break;
-                    case Input::BREAK:di2Item->setText(1,"ОБРЫВ!");break;
-                    case Input::SHORT:di2Item->setText(1,"КЗ");break;
+                    case Input::ON:
+                        di2Item->setText(1,"ВКЛ");
+                        di2Item->setTextColor(1, Qt::black);
+                        break;
+                    case Input::OFF:
+                        di2Item->setText(1,"ВЫКЛ");
+                        di2Item->setTextColor(1, Qt::red);
+                        break;
+                    case Input::BREAK:
+                        di2Item->setText(1,"ОБРЫВ!");
+                        di2Item->setTextColor(1, Qt::red);
+                        break;
+                    case Input::SHORT:
+                        di2Item->setText(1,"КЗ");
+                        di2Item->setTextColor(1, Qt::red);
+                        break;
+                    case Input::UNUSED:
+                        di2Item->setText(1,"Отключен");
+                        di2Item->setTextColor(1, Qt::darkGray);
+                        break;
                 }
             }
         }
@@ -120,6 +149,12 @@ void Point::setPointValue(const QString &param, std::any value)
             limit_switch=std::any_cast<bool>(value);
             if(limit_switch) limitSwitchItem->setText(1,"Вкл");
             else limitSwitchItem->setText(1,"Выкл");
+        }else if(param=="di1_filter") {
+            di1Filter=std::any_cast<double>(value);
+            di1FilterItem->setText(1,QString::number(di1Filter));
+        }else if(param=="di2_filter") {
+            di2Filter=std::any_cast<double>(value);
+            di2FilterItem->setText(1,QString::number(di2Filter));
         }
     }
 }
@@ -136,6 +171,9 @@ void Point::setPointToDefault()
     if(versionItem) versionItem->setText(1,"не известно");
     if(volumeItem) volumeItem->setText(1,"не известно");
     if(limitSwitchItem) limitSwitchItem->setText(1,"не известно");
+    if(di1FilterItem) di1FilterItem->setText(1,"не известно");
+    if(di2FilterItem) di2FilterItem->setText(1,"не известно");
+    if(di2TypeItem) di2TypeItem->setText(1,"не известно");
 }
 
 void Point::update()

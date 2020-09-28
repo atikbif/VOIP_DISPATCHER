@@ -5,6 +5,8 @@
 #include <QDebug>
 #include <QDateTime>
 #include <QMessageBox>
+#include "pointdata.h"
+#include "groupdata.h"
 
 void SQLDriver::initDataBase()
 {
@@ -86,46 +88,41 @@ void SQLDriver::insertDatatoDataBase()
 
     static qint64 last_sec = 0;
     static bool next_insert = false;
-    static int offset = 0;
+    static quint16 offset = 0;
 
+    const int maxPointSQLQuantity = 30;
+
+    // запись по таймеру
     if(QDateTime::currentSecsSinceEpoch()-last_sec>=10 || next_insert) {
         last_sec = QDateTime::currentSecsSinceEpoch();
 
         quint16 start_pos = 0;
-        quint16 end_pos = static_cast<quint16>(static_cast<quint8>(rawData.at(1)))<<8 | static_cast<quint8>(rawData.at(2));
+        // общее число точек переданных в запросе
+        // разбивается на несколько пакетов
+        quint16 end_pos = static_cast<quint16>(static_cast<quint16>(static_cast<quint8>(rawData.at(1)))<<8 | static_cast<quint8>(rawData.at(2)));
         if(next_insert) {
             start_pos = offset;
         }
-        if(end_pos-start_pos>30) {
-            end_pos = start_pos+30;
+        if(end_pos-start_pos>maxPointSQLQuantity) {
+            end_pos = start_pos+maxPointSQLQuantity;
             offset = end_pos;
             next_insert = true;
         }else next_insert = false;
         for(quint16 i=start_pos;i<end_pos;i++) {
-            quint16 reg_offset = 3+i*8;
-            if(reg_offset+7>=rawData.length()) return;
-            quint8 gr_num = static_cast<quint8>(rawData.at(reg_offset));
-            quint8 point_num = static_cast<quint8>(rawData.at(reg_offset+1));
+            if(rawData.length()<3+(i+1)*PointData::getRawDataSize()) return;
+            quint16 reg_offset = 3+i*PointData::getRawDataSize();
+            PointData p(rawData.mid(reg_offset,PointData::getRawDataSize()));
+            quint8 gr_num = p.getGroupNum();
+            quint8 point_num = p.getPointNum();
             if(gr_num && groupCorrectDataFlag.at(gr_num-1)) {
-                acc = static_cast<double>(static_cast<quint8>(rawData.at(reg_offset+2)))/10;
-                pow = static_cast<double>(static_cast<quint8>(rawData.at(reg_offset+3)))/10;
+                acc = p.getAccumulatorVoltage();
+                pow = p.getPowerVoltage();
+                di1=p.getInput1String();
+                di2=p.getInput2String();
+                do1=p.getOutput1String();
+                do2=p.getOutput2String();
+                speaker = p.getSpeakerString();
 
-                quint16 bits = static_cast<quint8>(rawData.at(reg_offset+5));
-                bits = (bits<<8) | static_cast<quint8>(rawData.at(reg_offset+6));
-
-                di1="выкл";
-                if(bits & (1<<0)) di1 = "вкл";
-                else if(bits & (1<<1)) {di1 = "обрыв";}
-                else if(bits & (1<<2)) {di1 = "замыкание";}
-                di2="выкл";
-                if(bits & (1<<3)) di2 = "вкл";
-                else if(bits & (1<<4)) {di2 = "обрыв";}
-                else if(bits & (1<<5)) {di2 = "замыкание";}
-                if(bits & (1<<6)) do1="вкл";else do1="выкл";
-                if(bits & (1<<7)) do2="вкл";else do2="выкл";
-                speaker = "не исправны";
-                if(bits & (1<<8)) {speaker = "исправны";}
-                if((bits & (1<<9))==0) {speaker = "не проверялись";}
             }else {
                 di1="нет данных";
                 di2="нет данных";
@@ -152,46 +149,48 @@ void SQLDriver::insertDatatoDataBase()
             query.bindValue(":ip", ip);
             query.exec();
 
-
-            if(di1=="вкл" && speaker=="исправны") addPointAlarm(ip,point_num,gr_num,"параметры в норме", "сообщение");
-            else {
-                if(di1=="обрыв") addPointAlarm(ip,point_num,gr_num,"Обрыв DI1", "авария");
-                if(di1=="замыкание") addPointAlarm(ip,point_num,gr_num,"Замыкание DI1", "авария");
-                if(di1=="выкл") addPointAlarm(ip,point_num,gr_num,"DI1 выкл", "авария");
-                if(speaker=="не проверялись") addPointAlarm(ip,point_num,gr_num,"Динамики не проверялись", "предупреждение");
-                if(speaker=="не исправны") addPointAlarm(ip,point_num,gr_num,"Динамики не исправны", "авария");
+            bool alarmFlag = false;
+            if(p.getInput1()!=Input::UNUSED) {
+                if(p.getInput1()==Input::BREAK) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Обрыв DI1", "авария");}
+                else if(p.getInput1()==Input::SHORT) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Замыкание DI1", "авария");}
+                else if(p.getInput1()==Input::OFF) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"DI1 выкл", "авария");}
             }
+            if(p.getInput2()!=Input::UNUSED) {
+                if(p.getInput2()==Input::BREAK) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Обрыв DI2", "авария");}
+                else if(p.getInput2()==Input::SHORT) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Замыкание DI2", "авария");}
+                else if(p.getInput2()==Input::OFF) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"DI2 выкл", "авария");}
+            }
+            if(p.getSpeaker()==Speaker::NOT_CHECKED) {addPointAlarm(ip,point_num,gr_num,"Динамики не проверялись", "предупреждение");}
+            else if(p.getSpeaker()==Speaker::PROBLEM) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Динамики не исправны", "авария");}
+
+            if(!alarmFlag) addPointAlarm(ip,point_num,gr_num,"параметры в норме", "сообщение");
         }
     }else {
+        // запись по изменениям
+        // общее число точек переданных в запросе
         quint16 cnt = static_cast<quint16>(static_cast<quint8>(rawData.at(1)))<<8 | static_cast<quint8>(rawData.at(2));
         quint16 last_cnt = static_cast<quint16>(static_cast<quint8>(lastData.at(1)))<<8 | static_cast<quint8>(lastData.at(2));
+        // если число точек не поменялось
         if(cnt==last_cnt) for(quint16 i=0;i<cnt;i++) {
-            quint16 reg_offset = 3+i*8;
-            if(reg_offset+7>=rawData.length()) return;
-            quint8 gr_num = static_cast<quint8>(rawData.at(reg_offset));
-            quint8 point_num = static_cast<quint8>(rawData.at(reg_offset+1));
-            acc = static_cast<double>(static_cast<quint8>(rawData.at(reg_offset+2)))/10;
-            pow = static_cast<double>(static_cast<quint8>(rawData.at(reg_offset+3)))/10;
+            if(rawData.length()<3+(i+1)*PointData::getRawDataSize()) return;
+            quint16 reg_offset = 3+i*PointData::getRawDataSize();
+            PointData p(rawData.mid(reg_offset,PointData::getRawDataSize()));
+            quint8 gr_num = p.getGroupNum();
+            quint8 point_num = p.getPointNum();
 
-            quint16 bits = static_cast<quint8>(rawData.at(reg_offset+5));
-            bits = (bits<<8) | static_cast<quint8>(rawData.at(reg_offset+6));
+            acc = p.getAccumulatorVoltage();
+            pow = p.getPowerVoltage();
+            di1=p.getInput1String();
+            di2=p.getInput2String();
+            do1=p.getOutput1String();
+            do2=p.getOutput2String();
+            speaker = p.getSpeakerString();
 
-            di1="выкл";
-            if(bits & (1<<0)) di1 = "вкл";
-            else if(bits & (1<<1)) {di1 = "обрыв";}
-            else if(bits & (1<<2)) {di1 = "замыкание";}
-            di2="выкл";
-            if(bits & (1<<3)) di2 = "вкл";
-            else if(bits & (1<<4)) {di2 = "обрыв";}
-            else if(bits & (1<<5)) {di2 = "замыкание";}
-            if(bits & (1<<6)) do1="вкл";else do1="выкл";
-            if(bits & (1<<7)) do2="вкл";else do2="выкл";
-            speaker = "не исправны";
-            if(bits & (1<<8)) {speaker = "исправны";}
-            if((bits & (1<<9))==0) {speaker = "не проверялись";}
 
-            quint8 last_gr_num = static_cast<quint8>(lastData.at(reg_offset));
-            quint8 last_point_num = static_cast<quint8>(lastData.at(reg_offset+1));
+
+            PointData pLast(lastData.mid(reg_offset,PointData::getRawDataSize()));
+            quint8 last_gr_num = pLast.getGroupNum();
+            quint8 last_point_num = pLast.getPointNum();
 
             if(last_gr_num==gr_num && last_point_num==point_num) {
                 double last_acc, last_pow;
@@ -199,25 +198,14 @@ void SQLDriver::insertDatatoDataBase()
                 QString last_gdi1, last_gdi2, last_gdi3, last_gdo1, last_gdo2;
 
                 if(gr_num && groupCorrectDataFlag.at(gr_num-1)) {
-                    last_acc = static_cast<double>(static_cast<quint8>(lastData.at(reg_offset+2)))/10;
-                    last_pow = static_cast<double>(static_cast<quint8>(lastData.at(reg_offset+3)))/10;
 
-                    quint16 last_bits = static_cast<quint8>(lastData.at(reg_offset+5));
-                    last_bits = (last_bits<<8) | static_cast<quint8>(lastData.at(reg_offset+6));
-
-                    last_di1="выкл";
-                    if(last_bits & (1<<0)) last_di1 = "вкл";
-                    else if(last_bits & (1<<1)) {last_di1 = "обрыв";}
-                    else if(last_bits & (1<<2)) {last_di1 = "замыкание";}
-                    last_di2="выкл";
-                    if(last_bits & (1<<3)) last_di2 = "вкл";
-                    else if(last_bits & (1<<4)) {last_di2 = "обрыв";}
-                    else if(last_bits & (1<<5)) {last_di2 = "замыкание";}
-                    if(last_bits & (1<<6)) last_do1="вкл";else last_do1="выкл";
-                    if(last_bits & (1<<7)) last_do2="вкл";else last_do2="выкл";
-                    last_speaker = "не исправны";
-                    if(last_bits & (1<<8)) {last_speaker = "исправны";}
-                    if((last_bits & (1<<9))==0) {last_speaker = "не проверялись";}
+                    last_acc = pLast.getAccumulatorVoltage();
+                    last_pow = pLast.getPowerVoltage();
+                    last_di1=pLast.getInput1String();
+                    last_di2=pLast.getInput2String();
+                    last_do1=pLast.getOutput1String();
+                    last_do2=pLast.getOutput2String();
+                    last_speaker = pLast.getSpeakerString();
                 }else {
                     di1="нет данных";
                     di2="нет данных";
@@ -250,15 +238,19 @@ void SQLDriver::insertDatatoDataBase()
                     query.bindValue(":pow", pow);
                     query.bindValue(":bat", acc);
                     query.bindValue(":ip", ip);
-
                     query.exec();
-
 
                     if(last_di1!=di1) {
                         if(di1=="обрыв") addPointAlarm(ip,point_num,gr_num,"Обрыв DI1", "авария");
                         if(di1=="замыкание") addPointAlarm(ip,point_num,gr_num,"Замыкание DI1", "авария");
                         if(di1=="выкл") addPointAlarm(ip,point_num,gr_num,"DI1 выкл", "авария");
                         if(di1=="вкл") addPointAlarm(ip,point_num,gr_num,"DI1 вкл", "сообщение");
+                    }
+                    if(last_di2!=di2) {
+                        if(di2=="обрыв") addPointAlarm(ip,point_num,gr_num,"Обрыв DI2", "авария");
+                        if(di2=="замыкание") addPointAlarm(ip,point_num,gr_num,"Замыкание DI2", "авария");
+                        if(di2=="выкл") addPointAlarm(ip,point_num,gr_num,"DI2 выкл", "авария");
+                        if(di2=="вкл") addPointAlarm(ip,point_num,gr_num,"DI2 вкл", "сообщение");
                     }
                     if(last_speaker!=speaker) {
                         if(speaker=="не проверялись") addPointAlarm(ip,point_num,gr_num,"Динамики не проверялись", "предупреждение");
@@ -280,38 +272,27 @@ void SQLDriver::insertDatatoDataBase()
 void SQLDriver::insertGroupDatatoDataBase()
 {
     QString gdi1,gdi2,gdi3,gdo1,gdo2;
-    bool gnot_act;
     QString last_gdi1, last_gdi2, last_gdi3, last_gdo1, last_gdo2;
     static qint64 last_sec = 0;
 
+    // запись по таймеру
     if(QDateTime::currentSecsSinceEpoch()-last_sec>=10) {
         last_sec = QDateTime::currentSecsSinceEpoch();
-        int length = rawGroupData.length()/5;
+        int length = rawGroupData.length()/GroupData::getRawGroupDataSize();
         for(int i=0;i<length;i++) {
-            if(rawGroupData.at(i*5)==i+1) {
-                uint16_t bits = (quint8)rawGroupData.at(i*5+3);
-                bits = (((quint16)bits)<<8) | (quint8)rawGroupData.at(i*5+4);
-
-                if(bits & (1<<11)) gnot_act = true;else gnot_act=false;
+            if(rawGroupData.length()<(i+1)*GroupData::getRawGroupDataSize()) return;
+            quint16 offset = static_cast<quint16>(i*GroupData::getRawGroupDataSize());
+            GroupData gr(rawGroupData.mid(offset,GroupData::getRawGroupDataSize()));
+            if(gr.getGrNum()==i+1) {
                 uint8_t cnt = 0;
-
-                if(gnot_act==false) {
+                if(gr.getNotActual()==false) {
                     groupCorrectDataFlag[i]=true;
                     cnt = (quint8)rawGroupData.at(i*5+1);
-                    gdi1 = "выкл";
-                    if(bits & (1<<0)) gdi1 = "вкл";
-                    else if(bits & (1<<1)) gdi1 = "обрыв";
-                    else if(bits & (1<<2)) gdi1 = "замыкание";
-                    gdi2 = "выкл";
-                    if(bits & (1<<3)) gdi2 = "вкл";
-                    else if(bits & (1<<4)) gdi2 = "обрыв";
-                    else if(bits & (1<<5)) gdi2 = "замыкание";
-                    gdi3 = "выкл";
-                    if(bits & (1<<6)) gdi3 = "вкл";
-                    else if(bits & (1<<7)) gdi3 = "обрыв";
-                    else if(bits & (1<<8)) gdi3 = "замыкание";
-                    if(bits & (1<<9)) gdo1="вкл";else gdo1="выкл";
-                    if(bits & (1<<10)) gdo2="вкл";else gdo2="выкл";
+                    gdi1 = gr.getInput1String();
+                    gdi2 = gr.getInput2String();
+                    gdi3 = gr.getInput3String();
+                    gdo1 = gr.getOut1String();
+                    gdo2 = gr.getOut2String();
                 }else {
                     groupCorrectDataFlag[i]=false;
                     cnt = 0;
@@ -336,7 +317,7 @@ void SQLDriver::insertGroupDatatoDataBase()
                 query.exec();
 
 
-                if(gnot_act) {
+                if(gr.getNotActual()) {
                     addGateAlarm(ip,i+1,"нет данных", "авария");
                 }else {
                     if(cnt>=point_cnt.at(i)) {
@@ -348,21 +329,22 @@ void SQLDriver::insertGroupDatatoDataBase()
             }
         }
     }else {
-        int length = rawGroupData.length()/5;
-        int lastLength = rawGroupData.length()/5;
+        // запись по изменению
+        int length = rawGroupData.length()/GroupData::getRawGroupDataSize();
+        int lastLength = lastGroupData.length()/GroupData::getRawGroupDataSize();
 
         if(length==lastLength)
         for(int i=0;i<length;i++) {
-            if(rawGroupData.at(i*5)==i+1) {
-                bool last_gnot_act = false;
-                uint16_t bits = (quint8)rawGroupData.at(i*5+3);
-                bits = (bits<<8) | (quint8)rawGroupData.at(i*5+4);
-                uint8_t cnt = (quint8)rawGroupData.at(i*5+1);
-                uint16_t last_bits = (quint8)lastGroupData.at(i*5+3);
-                last_bits = (last_bits<<8) | (quint8)lastGroupData.at(i*5+4);
-                uint8_t last_cnt = (quint8)lastGroupData.at(i*5+1);
-                if(bits & (1<<11)) gnot_act = true;else gnot_act=false;
-                if(last_bits & (1<<11)) last_gnot_act = true;else last_gnot_act=false;
+            if(rawGroupData.length()<(i+1)*GroupData::getRawGroupDataSize()) return;
+            if(lastGroupData.length()<(i+1)*GroupData::getRawGroupDataSize()) return;
+            quint16 offset = static_cast<quint16>(i*GroupData::getRawGroupDataSize());
+            GroupData gr(rawGroupData.mid(offset,GroupData::getRawGroupDataSize()));
+            GroupData grLast(lastGroupData.mid(offset,GroupData::getRawGroupDataSize()));
+            if((gr.getGrNum()==i+1) && grLast.getGrNum()==i+1) {
+                bool gnot_act = gr.getNotActual();
+                bool last_gnot_act = grLast.getNotActual();
+                uint8_t cnt = gr.getPointsQuantity();
+                uint8_t last_cnt = grLast.getPointsQuantity();
 
                 if(gnot_act) {
                     groupCorrectDataFlag[i]=false;
@@ -378,34 +360,16 @@ void SQLDriver::insertGroupDatatoDataBase()
                     last_gdo2="нет данных";
                 }else {
                     groupCorrectDataFlag[i]=true;
-                    gdi1 = "выкл";
-                    if(bits & (1<<0)) gdi1 = "вкл";
-                    else if(bits & (1<<1)) gdi1 = "обрыв";
-                    else if(bits & (1<<2)) gdi1 = "замыкание";
-                    gdi2 = "выкл";
-                    if(bits & (1<<3)) gdi2 = "вкл";
-                    else if(bits & (1<<4)) gdi2 = "обрыв";
-                    else if(bits & (1<<5)) gdi2 = "замыкание";
-                    gdi3 = "выкл";
-                    if(bits & (1<<6)) gdi3 = "вкл";
-                    else if(bits & (1<<7)) gdi3 = "обрыв";
-                    else if(bits & (1<<8)) gdi3 = "замыкание";
-                    if(bits & (1<<9)) gdo1="вкл";else gdo1="выкл";
-                    if(bits & (1<<10)) gdo2="вкл";else gdo2="выкл";
-                    last_gdi1 = "выкл";
-                    if(last_bits & (1<<0)) last_gdi1 = "вкл";
-                    else if(last_bits & (1<<1)) last_gdi1 = "обрыв";
-                    else if(last_bits & (1<<2)) last_gdi1 = "замыкание";
-                    last_gdi2 = "выкл";
-                    if(last_bits & (1<<3)) last_gdi2 = "вкл";
-                    else if(last_bits & (1<<4)) last_gdi2 = "обрыв";
-                    else if(last_bits & (1<<5)) last_gdi2 = "замыкание";
-                    last_gdi3 = "выкл";
-                    if(last_bits & (1<<6)) last_gdi3 = "вкл";
-                    else if(last_bits & (1<<7)) last_gdi3 = "обрыв";
-                    else if(last_bits & (1<<8)) last_gdi3 = "замыкание";
-                    if(last_bits & (1<<9)) last_gdo1="вкл";else last_gdo1="выкл";
-                    if(last_bits & (1<<10)) last_gdo2="вкл";else last_gdo2="выкл";
+                    gdi1 = gr.getInput1String();
+                    gdi2 = gr.getInput2String();
+                    gdi3 = gr.getInput3String();
+                    gdo1 = gr.getOut1String();
+                    gdo2 = gr.getOut2String();
+                    last_gdi1 = grLast.getInput1String();
+                    last_gdi2 = grLast.getInput2String();
+                    last_gdi3 = grLast.getInput3String();
+                    last_gdo1 = grLast.getOut1String();
+                    last_gdo2 = grLast.getOut2String();
                 }
 
 
@@ -426,9 +390,15 @@ void SQLDriver::insertGroupDatatoDataBase()
                 if(gnot_act==false) {
                     if(cnt!=last_cnt) {
                         if(cnt>=point_cnt.at(i)) {
-                            addGateAlarm(ip,i+1,"подключено " + QString::number(cnt) + " точек", "сообщение");
+                            QString message = "подключено " + QString::number(cnt) + " точек";
+                            addGateAlarm(ip,i+1,message, "сообщение");
+                            QString journMessage = QString("группа ") + QString::number(gr.getGrNum()) + "   " + message;
+                            insertMessage(journMessage, "сообщение");
                         }else {
-                            addGateAlarm(ip,i+1,"подключено " + QString::number(cnt) + " точек", "авария");
+                            QString message = "подключено " + QString::number(cnt) + " точек";
+                            addGateAlarm(ip,i+1,message, "авария");
+                            QString journMessage = QString("группа ") + QString::number(gr.getGrNum()) + "   " + message;
+                            insertMessage(journMessage, "авария");
                         }
                     }
                 }
@@ -436,8 +406,12 @@ void SQLDriver::insertGroupDatatoDataBase()
                 if(gnot_act!=last_gnot_act) {
                     if(gnot_act) {
                         addGateAlarm(ip,i+1,"нет данных", "авария");
+                        QString journMessage = QString("группа ") + QString::number(gr.getGrNum()) + "нет данных";
+                        insertMessage(journMessage, "авария");
                     }else {
                         addGateAlarm(ip,i+1,"группа подключена", "сообщение");
+                        QString journMessage = QString("группа ") + QString::number(gr.getGrNum()) + "группа подключена";
+                        insertMessage(journMessage, "сообщение");
                     }
                 }
             }
@@ -600,9 +574,6 @@ void SQLDriver::addGateAlarm(const QString &ip_addr, quint8 gate_num, const QStr
     query.bindValue(":gate", gate_num);
     query.bindValue(":ip", ip_addr);
     query.exec();
-
-    QString journMessage = QString("группа ") + QString::number(gate_num) + "   " + ip_addr + " " + message;
-    insertMessage(journMessage, type);
 }
 
 void SQLDriver::work()

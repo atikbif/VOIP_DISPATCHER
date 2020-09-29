@@ -241,11 +241,16 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
             auto res = dialog->exec();
             if(res==QDialog::Accepted) {
                 if(udpScanner && dialog->getCurrentVolume()>=0) {
+                    QString volStr;
+                    if(dialog->getCurrentVolume()==0) volStr = " (максимум)";
+                    else volStr = " (1/"+QString::number(std::pow(2,dialog->getCurrentVolume()))+")";
                     if(!dialog->isAllPointsActive()) {
                         udpScanner->setVolume(dialog->getCurrentGroup()+1,dialog->getCurrentPoint()+1,dialog->getCurrentVolume());
+                        manager->insertMessage("Настройка громкости: группa " + QString::number(dialog->getCurrentGroup()+1) + " точка " + QString::number(dialog->getCurrentPoint()+1) + volStr,"сообщение");
                     }else {
                         int cnt = dialog->getCurrentPointCnt();
                         udpScanner->setVolume(dialog->getCurrentGroup()+1,cnt,dialog->getCurrentVolume(),true);
+                        manager->insertMessage("Настройка громкости всех точек группы " + QString::number(dialog->getCurrentGroup()+1) + volStr,"сообщение");
                     }
                 }
             }
@@ -291,6 +296,21 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
                     quint8 enValue = dialog->getEnableValue();
                     if(udpScanner) {
                         udpScanner->setInpConf(grNum,pNum,filter,enValue);
+                        QString message = "Настройка входа:";
+                        message+= " группа " + QString::number(dialog->getCurrentGroup());
+                        message+= " точка " + QString::number(dialog->getCurrentPoint());
+                        message+= " вх 1 ";
+                        if(enValue&0x01) message+= "(разр,"; else message+="(запр,";
+                        message+= " фильтр " + QString::number(0.5*(filter&0x0F)) + ")";
+                        manager->insertMessage(message,"сообщение");
+
+                        message = "Настройка входа:";
+                        message+= " группа " + QString::number(dialog->getCurrentGroup());
+                        message+= " точка " + QString::number(dialog->getCurrentPoint());
+                        message+= " вх 2 ";
+                        if(enValue&0x02) message+= "(разр,"; else message+="(запр,";
+                        message+= " фильтр " + QString::number(0.5*(filter>>4)) + ")";
+                        manager->insertMessage(message,"сообщение");
                     }
                 }
             }
@@ -367,7 +387,7 @@ void MainWindow::on_pushButtonStartStop_clicked()
         manager->setIP(ip);
         udpScanner->start();
         linkState = false;
-        QTimer::singleShot(1000, this, [this](){
+        QTimer::singleShot(3000, this, [this](){
             if(linkState==false) {
                 ui->pushButtonStartStop->setStyleSheet("QPushButton{ background-color :red; }");
                 manager->insertMessage("нет связи","авария");

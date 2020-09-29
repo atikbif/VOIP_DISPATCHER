@@ -66,6 +66,23 @@ QByteArray UDPWorker::createRequestSetVolume(quint8 group, quint8 point, quint8 
 
 }
 
+QByteArray UDPWorker::createRequestSetInputFilter(quint8 group, quint8 point, quint8 filter, quint8 enableValue)
+{
+    QByteArray res;
+    res.append(static_cast<char>(id>>8));
+    res.append(static_cast<char>(id&0xFF));
+    res.append(0x06); // cmd check link
+    res.append(static_cast<char>(group));
+    res.append(static_cast<char>(point));
+    res.append(static_cast<char>(filter));
+    res.append(static_cast<char>(enableValue));
+    int crc = CheckSum::getCRC16(res);
+    res.append(static_cast<char>(crc & 0xFF));
+    res.append(static_cast<char>(crc >> 8));
+    id++;
+    return res;
+}
+
 QByteArray UDPWorker::createRequestCheckLink()
 {
     QByteArray res;
@@ -269,6 +286,16 @@ void UDPWorker::setVolume(int group, int point, int value, bool allPoints)
     //qDebug() << group << point << value;
 }
 
+void UDPWorker::setInpConf(int group, int point, int filter, int enValue)
+{
+    QMutexLocker locker(&mutex);
+    inpCfgCmd = true;
+    inpGroup = group;
+    inpPoint = point;
+    inpFilter = filter;
+    inpEn = enValue;
+}
+
 void UDPWorker::scan()
 {
     static char receiveBuf[1024];
@@ -294,6 +321,7 @@ void UDPWorker::scan()
         bool checkAudioFlagState = checkAudioFlag;
         bool volumeCmdState = volumeCmd;
         bool volumeAllState = volumeAll;
+        bool inpCfgCmdState = inpCfgCmd;
         mutex.unlock();
         if(workFlagState) {
             if(udp.state()==QUdpSocket::UnconnectedState) {
@@ -348,6 +376,19 @@ void UDPWorker::scan()
                     }
                 }
 
+            }
+            if(inpCfgCmdState) {
+                mutex.lock();
+                inpCfgCmd = false;
+                udp.write(createRequestSetInputFilter(static_cast<quint8>(inpGroup),static_cast<quint8>(inpPoint),static_cast<quint8>(inpFilter),static_cast<quint8>(inpEn)));
+                mutex.unlock();
+                if(udp.waitForReadyRead(wait_time_ms)) {
+                    qint64 cnt = 0;
+                    while(udp.hasPendingDatagrams()) {
+                        cnt = udp.readDatagram(receiveBuf,sizeof(receiveBuf));
+                        if(cnt==0) break;
+                    }
+                }
             }
             if(newAudioPacketFlagState) {
                 mutex.lock();

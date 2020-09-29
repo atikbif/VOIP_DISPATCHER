@@ -21,6 +21,13 @@ class UDPWorker : public QObject
     int volumePoint = 0;
     int volumeValue = 0;
     bool volumeAll = false;
+
+    bool inpCfgCmd = false;
+    int inpGroup = 0;
+    int inpPoint = 0;
+    int inpFilter = 0;
+    int inpEn = 0;
+
     QByteArray packet;
     static const quint8 call_wav[];
     int call_offset=0;
@@ -48,6 +55,7 @@ class UDPWorker : public QObject
 
     QByteArray createRequestWriteAudio(const QByteArray &input, bool silentMode = false);
     QByteArray createRequestSetVolume(quint8 group, quint8 point, quint8 value);
+    QByteArray createRequestSetInputFilter(quint8 group, quint8 point, quint8 filter, quint8 enableValue);
     QByteArray createRequestCheckLink();
     QByteArray createRequestReadState();
     QByteArray createRequestCheckAudio();
@@ -71,6 +79,7 @@ public:
     void setIP(const QString &value) {ip=value;}
     void checkAudio();
     void setVolume(int group,int point, int value, bool allPoints = false);
+    void setInpConf(int group,int point, int filter, int enValue);
 
 signals:
   void linkStateChanged(bool value);

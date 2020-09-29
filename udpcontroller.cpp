@@ -53,3 +53,8 @@ void UDPController::setVolume(int group, int point, int value, bool allPoints)
 {
     worker->setVolume(group, point, value, allPoints);
 }
+
+void UDPController::setInpConf(int group, int point, int filter, int enValue)
+{
+    worker->setInpConf(group,point,filter,enValue);
+}

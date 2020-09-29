@@ -22,6 +22,7 @@ public:
     void checkAudio();
     void setIP(const QString &ip) {worker->setIP(ip);}
     void setVolume(int group,int point, int value, bool allPoints = false);
+    void setInpConf(int group,int point, int filter, int enValue);
 
 signals:
     void init();

@@ -15,6 +15,31 @@ void DialogInputsConfig::addGateConf(const GateConf &conf)
     ui->comboBoxGroups->setCurrentIndex(0);
 }
 
+quint8 DialogInputsConfig::getCurrentGroup() const
+{
+    return ui->comboBoxGroups->currentIndex()+1;
+}
+
+quint8 DialogInputsConfig::getCurrentPoint() const
+{
+    return ui->comboBoxPoints->currentIndex()+1;
+}
+
+quint8 DialogInputsConfig::getFilterValue() const
+{
+    quint8 filter = static_cast<quint8>(ui->comboBoxDI1Filter->currentIndex() & 0x0F);
+    filter |= static_cast<quint8>(ui->comboBoxDI2Filter->currentIndex() & 0x0F)<<4;
+    return filter;
+}
+
+quint8 DialogInputsConfig::getEnableValue() const
+{
+    quint8 res = 0;
+    if(ui->checkBoxDI1->isChecked()) res|=0x01;
+    if(ui->checkBoxDI2->isChecked()) res|=0x02;
+    return res;
+}
+
 DialogInputsConfig::~DialogInputsConfig()
 {
     delete ui;

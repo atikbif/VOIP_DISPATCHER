@@ -29,6 +29,10 @@ class DialogInputsConfig : public QDialog
 public:
     explicit DialogInputsConfig(QWidget *parent = nullptr);
     void addGateConf(const GateConf &conf);
+    quint8 getCurrentGroup() const;
+    quint8 getCurrentPoint() const;
+    quint8 getFilterValue() const;
+    quint8 getEnableValue() const;
     ~DialogInputsConfig();
 
 private slots:

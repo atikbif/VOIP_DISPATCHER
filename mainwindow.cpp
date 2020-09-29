@@ -285,7 +285,13 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
                 }
                 auto res = dialog->exec();
                 if(res==QDialog::Accepted) {
-
+                    quint8 grNum = dialog->getCurrentGroup();
+                    quint8 pNum = dialog->getCurrentPoint();
+                    quint8 filter = dialog->getFilterValue();
+                    quint8 enValue = dialog->getEnableValue();
+                    if(udpScanner) {
+                        udpScanner->setInpConf(grNum,pNum,filter,enValue);
+                    }
                 }
             }
         }else QMessageBox::information(this,"Настройка входов точки","Необходимо запустить опрос");

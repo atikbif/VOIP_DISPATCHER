@@ -114,56 +114,57 @@ void SQLDriver::insertDatatoDataBase()
             PointData p(rawData.mid(reg_offset,PointData::getRawDataSize()));
             quint8 gr_num = p.getGroupNum();
             quint8 point_num = p.getPointNum();
-            if(gr_num && groupCorrectDataFlag.at(gr_num-1)) {
-                acc = p.getAccumulatorVoltage();
-                pow = p.getPowerVoltage();
-                di1=p.getInput1String();
-                di2=p.getInput2String();
-                do1=p.getOutput1String();
-                do2=p.getOutput2String();
-                speaker = p.getSpeakerString();
 
-            }else {
-                di1="нет данных";
-                di2="нет данных";
-                do1="нет данных";
-                do2="нет данных";
-                acc = 0;
-                pow = 0;
-                speaker = "нет данных";
-                addPointAlarm(ip,point_num,gr_num,"нет данных", "авария");
+            if(gr_num && groupCorrectDataFlag.at(gr_num-1).has_value()) {
+                if(groupCorrectDataFlag.at(gr_num-1).value()) {
+                    acc = p.getAccumulatorVoltage();
+                    pow = p.getPowerVoltage();
+                    di1=p.getInput1String();
+                    di2=p.getInput2String();
+                    do1=p.getOutput1String();
+                    do2=p.getOutput2String();
+                    speaker = p.getSpeakerString();
+                }else {
+                    di1="нет данных";
+                    di2="нет данных";
+                    do1="нет данных";
+                    do2="нет данных";
+                    acc = 0;
+                    pow = 0;
+                    speaker = "нет данных";
+                    addPointAlarm(ip,point_num,gr_num,"нет данных", "авария");
+                }
+                QSqlQuery query;
+                query.prepare("INSERT INTO points (num, gate, di1, di2, do1, do2, speaker, pow, bat, ip)"
+                                                      "VALUES (:num, :gate, :di1, :di2, :do1, :do2, :speaker, :pow, :bat, :ip);");
+                query.bindValue(":num", point_num);
+                query.bindValue(":gate", gr_num);
+                query.bindValue(":di1", di1);
+                query.bindValue(":di2", di2);
+                query.bindValue(":do1", do1);
+                query.bindValue(":do2", do2);
+                query.bindValue(":speaker", speaker);
+                query.bindValue(":pow", pow);
+                query.bindValue(":bat", acc);
+                query.bindValue(":ip", ip);
+                query.exec();
+
+                bool alarmFlag = false;
+                if(p.getInput1()!=Input::UNUSED) {
+                    if(p.getInput1()==Input::BREAK) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Обрыв DI1", "авария");}
+                    else if(p.getInput1()==Input::SHORT) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Замыкание DI1", "авария");}
+                    else if(p.getInput1()==Input::OFF) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"DI1 выкл", "авария");}
+                }
+                if(p.getInput2()!=Input::UNUSED) {
+                    if(p.getInput2()==Input::BREAK) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Обрыв DI2", "авария");}
+                    else if(p.getInput2()==Input::SHORT) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Замыкание DI2", "авария");}
+                    else if(p.getInput2()==Input::OFF) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"DI2 выкл", "авария");}
+                }
+                if(p.getSpeaker()==Speaker::NOT_CHECKED) {addPointAlarm(ip,point_num,gr_num,"Динамики не проверялись", "предупреждение");}
+                else if(p.getSpeaker()==Speaker::PROBLEM) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Динамики не исправны", "авария");}
+
+                if(!alarmFlag) addPointAlarm(ip,point_num,gr_num,"параметры в норме", "сообщение");
             }
-
-            QSqlQuery query;
-            query.prepare("INSERT INTO points (num, gate, di1, di2, do1, do2, speaker, pow, bat, ip)"
-                                                  "VALUES (:num, :gate, :di1, :di2, :do1, :do2, :speaker, :pow, :bat, :ip);");
-            query.bindValue(":num", point_num);
-            query.bindValue(":gate", gr_num);
-            query.bindValue(":di1", di1);
-            query.bindValue(":di2", di2);
-            query.bindValue(":do1", do1);
-            query.bindValue(":do2", do2);
-            query.bindValue(":speaker", speaker);
-            query.bindValue(":pow", pow);
-            query.bindValue(":bat", acc);
-            query.bindValue(":ip", ip);
-            query.exec();
-
-            bool alarmFlag = false;
-            if(p.getInput1()!=Input::UNUSED) {
-                if(p.getInput1()==Input::BREAK) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Обрыв DI1", "авария");}
-                else if(p.getInput1()==Input::SHORT) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Замыкание DI1", "авария");}
-                else if(p.getInput1()==Input::OFF) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"DI1 выкл", "авария");}
-            }
-            if(p.getInput2()!=Input::UNUSED) {
-                if(p.getInput2()==Input::BREAK) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Обрыв DI2", "авария");}
-                else if(p.getInput2()==Input::SHORT) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Замыкание DI2", "авария");}
-                else if(p.getInput2()==Input::OFF) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"DI2 выкл", "авария");}
-            }
-            if(p.getSpeaker()==Speaker::NOT_CHECKED) {addPointAlarm(ip,point_num,gr_num,"Динамики не проверялись", "предупреждение");}
-            else if(p.getSpeaker()==Speaker::PROBLEM) {alarmFlag=true;addPointAlarm(ip,point_num,gr_num,"Динамики не исправны", "авария");}
-
-            if(!alarmFlag) addPointAlarm(ip,point_num,gr_num,"параметры в норме", "сообщение");
         }
     }else {
         // запись по изменениям
@@ -192,12 +193,12 @@ void SQLDriver::insertDatatoDataBase()
             quint8 last_gr_num = pLast.getGroupNum();
             quint8 last_point_num = pLast.getPointNum();
 
-            if(last_gr_num==gr_num && last_point_num==point_num) {
+            if(gr_num && groupCorrectDataFlag.at(gr_num-1).has_value() && last_gr_num==gr_num && last_point_num==point_num) {
                 double last_acc, last_pow;
                 QString last_di1, last_di2, last_do1, last_do2,last_speaker;
                 QString last_gdi1, last_gdi2, last_gdi3, last_gdo1, last_gdo2;
 
-                if(gr_num && groupCorrectDataFlag.at(gr_num-1)) {
+                if(gr_num && groupCorrectDataFlag.at(gr_num-1).value()) {
 
                     last_acc = pLast.getAccumulatorVoltage();
                     last_pow = pLast.getPowerVoltage();
@@ -424,7 +425,7 @@ void SQLDriver::insertGroupDatatoDataBase()
 SQLDriver::SQLDriver(QObject *parent) : QObject(parent)
 {
     for(int i=0;i<32;i++) point_cnt.push_back(0);
-    std::fill(groupCorrectDataFlag.begin(),groupCorrectDataFlag.end(),0);
+    std::fill(groupCorrectDataFlag.begin(),groupCorrectDataFlag.end(),std::nullopt);
 }
 
 void SQLDriver::finish()

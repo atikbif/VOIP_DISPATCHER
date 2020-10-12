@@ -9,6 +9,7 @@
 #include <QTableView>
 #include "coloredsqlquerymodel.h"
 #include <array>
+#include <optional>
 
 class SQLDriver : public QObject
 {
@@ -36,7 +37,7 @@ class SQLDriver : public QObject
     QByteArray lastData;
     QByteArray lastGroupData;
     QSqlDatabase db;
-    std::array<bool,256> groupCorrectDataFlag;
+    std::array<std::optional<bool>,256> groupCorrectDataFlag;
     /*QSqlQueryModel *journalModel;
     QSqlQueryModel *pointModel;
     QSqlQueryModel *groupModel;
